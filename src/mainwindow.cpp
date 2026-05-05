@@ -53,6 +53,7 @@
 #include "mappackdlg.h"
 #include "patcheditordlg.h"
 #include "dtcdialog.h"
+#include "cloud/CloudToolsDlg.h"
 #include "checksummanager.h"
 #include "checksumelectdlg.h"
 #include "aifunctionsdlg.h"
@@ -1981,6 +1982,7 @@ void MainWindow::buildActions()
     m_actImportMapPack   = new QAction(tr("Import Map Pack…"),           this);
     m_actPatchEditor     = new QAction(tr("Open Patch Script…"),         this);
     m_actDtcManager      = new QAction(tr("DTC Manager (A2L)…"),         this);
+    m_actDtcWizard       = new QAction(tr("Cloud Tools (DTC && Features)…"), this);
     m_actAIFunctions     = new QAction(tr("AI Functions…"), this);
     m_actVerifyChecksum  = new QAction(tr("Verify Checksum"),   this);
     m_actCorrectChecksum = new QAction(tr("Correct Checksum…"), this);
@@ -2247,6 +2249,17 @@ void MainWindow::buildActions()
     connect(m_actCompareHex,      &QAction::triggered, this, &MainWindow::actCompareHex);
     connect(m_actImportMapPack,   &QAction::triggered, this, &MainWindow::actImportMapPack);
     connect(m_actPatchEditor,     &QAction::triggered, this, &MainWindow::actOpenPatchEditor);
+    connect(m_actDtcWizard,      &QAction::triggered, this, [this]() {
+        auto *proj = activeProject();
+        if (!proj || proj->currentData.isEmpty()) {
+            QMessageBox::information(this, tr("No project"),
+                tr("Open a project with ROM data first."));
+            return;
+        }
+        auto *dlg = new CloudToolsDlg(proj, this);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        dlg->show();
+    });
     connect(m_actDtcManager,     &QAction::triggered, this, [this]() {
         auto *proj = activeProject();
         if (!proj) {
@@ -2401,6 +2414,7 @@ void MainWindow::retranslateUi()
     m_actImportMapPack->setText(tr("Import Map Pack…"));
     m_actPatchEditor->setText(tr("Open Patch Script…"));
     m_actDtcManager->setText(tr("DTC Manager (A2L)…"));
+    m_actDtcWizard->setText(tr("Cloud Tools (DTC && Features)…"));
     m_actAIFunctions->setText(tr("AI Functions…"));
     m_actVerifyChecksum->setText(tr("Verify Checksum"));
     m_actCorrectChecksum->setText(tr("Correct Checksum…"));
@@ -2534,6 +2548,7 @@ void MainWindow::retranslateUi()
     m_menuProject->addSeparator();
     m_menuProject->addAction(m_actImportMapPack);
     m_menuProject->addAction(m_actPatchEditor);
+    m_menuProject->addAction(m_actDtcWizard);
     m_menuProject->addAction(m_actDtcManager);
 #ifdef RX14_PRO_BUILD
     m_menuProject->addAction(m_actAIFunctions);

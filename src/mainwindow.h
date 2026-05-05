@@ -366,6 +366,7 @@ private:
     QAction *m_actImportMapPack   = nullptr;
     QAction *m_actPatchEditor     = nullptr;
     QAction *m_actDtcManager      = nullptr;
+    QAction *m_actDtcWizard       = nullptr;
     QAction *m_actAIFunctions     = nullptr;
     QAction *m_actVerifyChecksum  = nullptr;
     QAction *m_actCorrectChecksum = nullptr;
