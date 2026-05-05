@@ -34,36 +34,41 @@ class QTableView;
 class QVBoxLayout;
 class QWidget;
 
+#include "appconfig.h"
+
 namespace Theme {
 
-// ── Surfaces ────────────────────────────────────────────────────────────────
-inline constexpr const char *bgRoot       = "#0d1117";   // app/dialog root
-inline constexpr const char *bgCard       = "#161b22";   // raised cards
-inline constexpr const char *bgSunken     = "#0d1117";   // input wells inside cards
-inline constexpr const char *bgHover      = "#21262d";
-inline constexpr const char *border       = "#30363d";
-inline constexpr const char *borderSubtle = "#21262d";
-inline constexpr const char *borderHover  = "#58a6ff";
+// ── Runtime theme colors (read from AppConfig) ─────────────────────────────
+// These are functions so they return current theme values, not compile-time.
+#define _TC(field) (AppConfig::instance().colors.field.name())
 
-// ── Text ────────────────────────────────────────────────────────────────────
-inline constexpr const char *textPrimary    = "#c9d1d9";
-inline constexpr const char *textBright     = "#e6edf3";
-inline constexpr const char *textMuted      = "#8b949e";
-inline constexpr const char *textDim        = "#7d8590";
+inline QString bgRoot()       { return _TC(uiBg); }
+inline QString bgCard()       { return _TC(uiPanel); }
+inline QString bgSunken()     { return _TC(uiBg); }
+inline QString bgHover()      { return _TC(buttonBg); }
+inline QString border()       { return _TC(uiBorder); }
+inline QString borderSubtle() { return _TC(buttonBg); }
+inline QString borderHover()  { return _TC(uiAccent).isEmpty() ? "#58a6ff" : _TC(uiAccent); }
+
+inline QString textPrimary()  { return _TC(uiText); }
+inline QString textBright()   { return _TC(uiText); }
+inline QString textMuted()    { return _TC(uiTextDim); }
+inline QString textDim()      { return _TC(uiTextDim); }
 inline constexpr const char *textOnPrimary  = "#ffffff";
 
-// ── Brand & semantic ────────────────────────────────────────────────────────
-inline constexpr const char *primary        = "#1f6feb";
-inline constexpr const char *primaryHover   = "#388bfd";
-inline constexpr const char *primaryPressed = "#1158c7";
-inline constexpr const char *accent         = "#58a6ff";   // softer brand blue (headings)
-inline constexpr const char *accentDim      = "#79c0ff";
+inline QString primary()      { return _TC(uiAccent); }
+inline QString primaryHover() { return AppConfig::instance().colors.uiAccent.lighter(120).name(); }
+inline QString primaryPressed(){ return AppConfig::instance().colors.uiAccent.darker(130).name(); }
+inline QString accent()       { return AppConfig::instance().colors.uiAccent.lighter(140).name(); }
+inline QString accentDim()    { return AppConfig::instance().colors.uiAccent.lighter(160).name(); }
 
-inline constexpr const char *success        = "#3fb950";   // status/text
-inline constexpr const char *successButton  = "#238636";   // pill backgrounds only
+inline constexpr const char *success        = "#3fb950";
+inline constexpr const char *successButton  = "#238636";
 
 inline constexpr const char *danger         = "#f85149";
 inline constexpr const char *dangerButton   = "#da3633";
+
+#undef _TC
 
 inline constexpr const char *warning        = "#f0883e";
 inline constexpr const char *info           = "#79c0ff";

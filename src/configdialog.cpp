@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "appconfig.h"
+#include "uiwidgets.h"
 #include "configdialog.h"
 #include "appconstants.h"
 #include <QHBoxLayout>
@@ -24,7 +26,7 @@ static void applySwatchStyle(QPushButton *btn, const QColor &col)
 {
     btn->setStyleSheet(QString(
         "QPushButton { background:%1; border:1px solid #555; border-radius:2px; }"
-        "QPushButton:hover { border-color:#58a6ff; }").arg(col.name(QColor::HexRgb)));
+        "QPushButton:hover { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }").arg(col.name(QColor::HexRgb)));
 }
 
 static QPushButton *makeSwatchBtn(const QColor &col)
@@ -48,29 +50,29 @@ ConfigDialog::ConfigDialog(QWidget *parent)
     setModal(true);
 
     setStyleSheet(
-        "QDialog { background:#0d1117; }"
-        "QGroupBox { color:#8b949e; border:1px solid #30363d; border-radius:4px;"
+        "QDialog { background:" + AppConfig::instance().colors.uiBg.name() + "; }"
+        "QGroupBox { color:" + AppConfig::instance().colors.uiTextDim.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; border-radius:4px;"
         "  margin-top:10px; font-size:8pt; padding-top:6px; }"
         "QGroupBox::title { subcontrol-origin:margin; left:8px; padding:0 4px; }"
-        "QLabel { color:#c9d1d9; background:transparent; }"
-        "QPushButton { background:#21262d; color:#c9d1d9; border:1px solid #30363d;"
+        "QLabel { color:" + AppConfig::instance().colors.uiText.name() + "; background:transparent; }"
+        "QPushButton { background:" + AppConfig::instance().colors.buttonBg.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + ";"
         "  border-radius:4px; padding:4px 12px; }"
-        "QPushButton:hover { border-color:#58a6ff; color:#58a6ff; }"
-        "QPushButton:pressed { background:#1f6feb; }"
-        "QScrollArea { background:#0d1117; border:none; }"
-        "QScrollBar:vertical { background:#0d1117; width:8px; }"
-        "QScrollBar::handle:vertical { background:#30363d; border-radius:4px; min-height:20px; }"
+        "QPushButton:hover { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }"
+        "QPushButton:pressed { background:" + AppConfig::instance().colors.uiAccent.name() + "; }"
+        "QScrollArea { background:" + AppConfig::instance().colors.uiBg.name() + "; border:none; }"
+        "QScrollBar:vertical { background:" + AppConfig::instance().colors.uiBg.name() + "; width:8px; }"
+        "QScrollBar::handle:vertical { background:" + AppConfig::instance().colors.uiBorder.name() + "; border-radius:4px; min-height:20px; }"
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }");
 
     m_nav = new QListWidget(this);
     m_nav->setFixedWidth(140);
     m_nav->setStyleSheet(
-        "QListWidget { background:#0d1117; border:none;"
-        "  border-right:1px solid #30363d; outline:none; }"
-        "QListWidget::item { color:#8b949e; padding:10px 16px; font-size:9pt; }"
-        "QListWidget::item:selected { background:#1f6feb; color:#ffffff;"
-        "  border-left:3px solid #58a6ff; }"
-        "QListWidget::item:hover:!selected { background:#161b22; color:#c9d1d9; }");
+        "QListWidget { background:" + AppConfig::instance().colors.uiBg.name() + "; border:none;"
+        "  border-right:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; outline:none; }"
+        "QListWidget::item { color:" + AppConfig::instance().colors.uiTextDim.name() + "; padding:10px 16px; font-size:9pt; }"
+        "QListWidget::item:selected { background:" + AppConfig::instance().colors.uiAccent.name() + "; color:#ffffff;"
+        "  border-left:3px solid " + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }"
+        "QListWidget::item:hover:!selected { background:" + AppConfig::instance().colors.uiPanel.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; }");
 
     m_nav->addItem(tr("Colors"));
     m_nav->addItem(tr("Display"));
@@ -86,14 +88,13 @@ ConfigDialog::ConfigDialog(QWidget *parent)
     auto *btnCancel = new QPushButton(tr("Cancel"));
     auto *btnApply  = new QPushButton(tr("Apply"));
     btnApply->setStyleSheet(
-        "QPushButton { background:#1f6feb; color:#fff; border:none;"
+        "QPushButton { background:" + AppConfig::instance().colors.uiAccent.name() + "; color:#fff; border:none;"
         "  border-radius:4px; padding:4px 16px; }"
-        "QPushButton:hover { background:#388bfd; }");
+        "QPushButton:hover { background:" + AppConfig::instance().colors.uiAccent.lighter(120).name() + "; }");
 
     connect(btnReset, &QPushButton::clicked, this, [this]() {
         AppConfig::instance().resetToDefaults();
         AppConfig::instance().save();
-        accept();
     });
     connect(btnCancel, &QPushButton::clicked, this, &ConfigDialog::reject);
     connect(btnApply,  &QPushButton::clicked, this, [this]() {
@@ -104,7 +105,6 @@ ConfigDialog::ConfigDialog(QWidget *parent)
         AppConfig::instance().colorsChanged();
         AppConfig::instance().displaySettingsChanged();
         saveAISettings();
-        accept();
     });
 
     auto *btnRow = new QHBoxLayout;
@@ -117,7 +117,7 @@ ConfigDialog::ConfigDialog(QWidget *parent)
 
     auto *sep = new QFrame;
     sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet("color:#30363d;");
+    sep->setStyleSheet("color:" + AppConfig::instance().colors.uiBorder.name() + ";");
 
     auto *split = new QHBoxLayout;
     split->setContentsMargins(0,0,0,0);
@@ -219,7 +219,7 @@ static QWidget *makeLegendRow(int tier, const QString &text)
     dot->setAlignment(Qt::AlignCenter);
 
     auto *lbl = new QLabel(text);
-    lbl->setStyleSheet("color:#8b949e; font-size:8pt;");
+    lbl->setStyleSheet("color:" + AppConfig::instance().colors.uiTextDim.name() + "; font-size:8pt;");
 
     hbox->addWidget(dot);
     hbox->addWidget(lbl);
@@ -230,10 +230,62 @@ static QWidget *makeLegendRow(int tier, const QString &text)
 void ConfigDialog::buildColorsPage()
 {
     auto *content = new QWidget;
-    content->setStyleSheet("background:#0d1117;");
+    content->setStyleSheet("background:" + AppConfig::instance().colors.uiBg.name() + ";");
     auto *vbox = new QVBoxLayout(content);
     vbox->setContentsMargins(14, 14, 14, 14);
     vbox->setSpacing(10);
+
+    // ── Theme Presets ─────────────────────────────────────────────────────────
+    {
+        auto *themeRow = new QHBoxLayout();
+        themeRow->setSpacing(10);
+        auto *themeLabel = new QLabel(tr("Theme Preset:"));
+        themeLabel->setStyleSheet("color:" + AppConfig::instance().colors.uiText.name() + "; font-size:10pt; font-weight:bold; background:transparent;");
+        auto *themeCombo = new QComboBox();
+        themeCombo->setMinimumWidth(200);
+        themeCombo->setStyleSheet(
+            "QComboBox { background:" + AppConfig::instance().colors.uiPanel.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + ";"
+            " border-radius:4px; padding:4px 8px; font-size:10pt; }"
+            "QComboBox:hover { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }"
+            "QComboBox::drop-down { border:none; }"
+            "QComboBox QAbstractItemView { background:" + AppConfig::instance().colors.uiPanel.name() + "; color:" + AppConfig::instance().colors.uiText.name() + ";"
+            " selection-background-color:" + AppConfig::instance().colors.uiAccent.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; }");
+        themeCombo->addItem(tr("Custom"), "custom");
+        for (const auto &t : ColorThemes::all())
+            themeCombo->addItem(tr(t.nameKey), QString::fromUtf8(t.id));
+
+        connect(themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, [this](int idx) {
+            if (idx <= 0) return;
+            const auto &themes = ColorThemes::all();
+            if (idx - 1 >= themes.size()) return;
+            m_working = themes[idx - 1].colors;
+            auto &cfg = AppConfig::instance();
+            cfg.colors = m_working;
+            cfg.save();
+            emit cfg.colorsChanged();
+            // Force refresh ALL widgets in this dialog with new theme
+            setStyleSheet("");  // clear
+            setStyleSheet(QString("QDialog { background:%1; color:%2; }"
+                "QGroupBox { background:%3; color:%2; border:1px solid %4; border-radius:6px; margin-top:8px; padding-top:14px; }"
+                "QGroupBox::title { subcontrol-origin:margin; left:10px; padding:0 4px; color:%5; }"
+                "QLabel { color:%2; background:transparent; }"
+                "QScrollArea { background:%1; border:none; }"
+                "QWidget#colorsContent { background:%1; }")
+                .arg(Theme::bgRoot(), Theme::textPrimary(), Theme::bgCard(), Theme::border(), Theme::accent()));
+            // Also refresh the nav sidebar
+            if (m_nav) m_nav->setStyleSheet(QString(
+                "QListWidget { background:%1; color:%2; border:none; border-right:1px solid %3; }"
+                "QListWidget::item { padding:8px 12px; }"
+                "QListWidget::item:selected { background:%4; color:white; border-radius:4px; }")
+                .arg(Theme::bgCard(), Theme::textMuted(), Theme::border(), Theme::primary()));
+        });
+
+        themeRow->addWidget(themeLabel);
+        themeRow->addWidget(themeCombo, 1);
+        vbox->addLayout(themeRow);
+        vbox->addSpacing(6);
+    }
 
     // ── Map Highlight Bands ──────────────────────────────────────────────────
     auto *grpBands = new QGroupBox(tr("Map Highlight Bands"));
@@ -327,6 +379,22 @@ void ConfigDialog::buildColorsPage()
     uiLay->addWidget(makeColorRow(tr("Accent (links, selection)"),  m_working.uiAccent));
     vbox->addWidget(grpUi);
 
+    // ── Structural UI ────────────────────────────────────────────────────────
+    auto *grpStruct = new QGroupBox(tr("Bars & Layout"));
+    auto *structLay = new QVBoxLayout(grpStruct);
+    structLay->setContentsMargins(8, 4, 8, 8);
+    structLay->setSpacing(2);
+    structLay->addWidget(makeColorRow(tr("Top bar background"),       m_working.topBarBg));
+    structLay->addWidget(makeColorRow(tr("Toolbar background"),       m_working.toolbarBg));
+    structLay->addWidget(makeColorRow(tr("Status bar background"),    m_working.statusBarBg));
+    structLay->addWidget(makeColorRow(tr("Project tree background"),  m_working.treeBg));
+    structLay->addWidget(makeColorRow(tr("Tree selection highlight"), m_working.treeSelected));
+    structLay->addWidget(makeColorRow(tr("Button background"),        m_working.buttonBg));
+    structLay->addWidget(makeColorRow(tr("Button text"),              m_working.buttonText));
+    structLay->addWidget(makeColorRow(tr("Input field background"),   m_working.inputBg));
+    structLay->addWidget(makeColorRow(tr("Input field border"),       m_working.inputBorder));
+    vbox->addWidget(grpStruct);
+
     vbox->addStretch();
 
     auto *scroll = new QScrollArea;
@@ -339,20 +407,20 @@ void ConfigDialog::buildColorsPage()
 void ConfigDialog::buildDisplayPage()
 {
     auto *page = new QWidget;
-    page->setStyleSheet("background:#0d1117;");
+    page->setStyleSheet("background:" + AppConfig::instance().colors.uiBg.name() + ";");
     auto *lay = new QVBoxLayout(page);
     lay->setContentsMargins(24, 24, 24, 24);
     lay->setSpacing(12);
 
     auto *mapGroup = new QGroupBox(tr("Map List"));
     mapGroup->setStyleSheet(
-        "QGroupBox { color:#8b949e; border:1px solid #30363d; border-radius:4px;"
+        "QGroupBox { color:" + AppConfig::instance().colors.uiTextDim.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; border-radius:4px;"
         "  margin-top:10px; font-size:8pt; padding-top:6px; }"
         "QGroupBox::title { subcontrol-origin:margin; left:8px; padding:0 4px; }");
     auto *mapLay = new QVBoxLayout(mapGroup);
 
     m_showLongNamesCheck = new QCheckBox(tr("Show long map names (description)"));
-    m_showLongNamesCheck->setStyleSheet("color:#c9d1d9; font-size:9pt;");
+    m_showLongNamesCheck->setStyleSheet("color:" + AppConfig::instance().colors.uiText.name() + "; font-size:9pt;");
     m_showLongNamesCheck->setChecked(AppConfig::instance().showLongMapNames);
     mapLay->addWidget(m_showLongNamesCheck);
 
@@ -406,19 +474,19 @@ void ConfigDialog::buildAIPage()
     };
 
     auto *page = new QWidget;
-    page->setStyleSheet("background:#0d1117;");
+    page->setStyleSheet("background:" + AppConfig::instance().colors.uiBg.name() + ";");
 
     auto *vbox = new QVBoxLayout(page);
     vbox->setContentsMargins(24, 24, 24, 24);
     vbox->setSpacing(14);
 
     auto *hdr = new QLabel(tr("AI Provider Configuration"));
-    hdr->setStyleSheet("color:#e6edf3; font-size:11pt; font-weight:bold;");
+    hdr->setStyleSheet("color:" + AppConfig::instance().colors.uiText.name() + "; font-size:11pt; font-weight:bold;");
     vbox->addWidget(hdr);
 
     auto *desc = new QLabel(tr("Configure the AI provider used by the AI Assistant panel. "
                                "Settings are shared with the assistant."));
-    desc->setStyleSheet("color:#8b949e; font-size:8pt;");
+    desc->setStyleSheet("color:" + AppConfig::instance().colors.uiTextDim.name() + "; font-size:8pt;");
     desc->setWordWrap(true);
     vbox->addWidget(desc);
 
@@ -431,11 +499,11 @@ void ConfigDialog::buildAIPage()
     // Provider combo
     m_aiProviderCombo = new QComboBox;
     m_aiProviderCombo->setStyleSheet(
-        "QComboBox { background:#21262d; color:#c9d1d9; border:1px solid #30363d; "
+        "QComboBox { background:" + AppConfig::instance().colors.buttonBg.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; "
         "            border-radius:4px; padding:4px 8px; font-size:9pt; }"
-        "QComboBox:hover { border-color:#58a6ff; }"
-        "QComboBox QAbstractItemView { background:#21262d; color:#c9d1d9; "
-        "  selection-background-color:#1f6feb; border:1px solid #30363d; }");
+        "QComboBox:hover { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }"
+        "QComboBox QAbstractItemView { background:" + AppConfig::instance().colors.buttonBg.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; "
+        "  selection-background-color:" + AppConfig::instance().colors.uiAccent.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; }");
     for (int i = 0; i < m_aiProviders.size(); ++i)
         m_aiProviderCombo->addItem(tierIcon(m_aiProviders[i].tier), m_aiProviders[i].label);
     form->addRow(tr("Provider:"), m_aiProviderCombo);
@@ -451,9 +519,9 @@ void ConfigDialog::buildAIPage()
     m_aiKeyEdit->setEchoMode(QLineEdit::Password);
     m_aiKeyEdit->setPlaceholderText("sk-…");
     m_aiKeyEdit->setStyleSheet(
-        "QLineEdit { background:#21262d; color:#c9d1d9; border:1px solid #30363d; "
+        "QLineEdit { background:" + AppConfig::instance().colors.buttonBg.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; "
         "            border-radius:4px; padding:4px 8px; font-size:9pt; }"
-        "QLineEdit:focus { border-color:#58a6ff; }");
+        "QLineEdit:focus { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }");
     form->addRow(tr("API Key:"), m_aiKeyEdit);
 
     // Model

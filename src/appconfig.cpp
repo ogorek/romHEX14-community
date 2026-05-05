@@ -63,6 +63,270 @@ void AppConfig::applyDefaults(AppColors &c)
     c.uiText     = QColor(201, 209, 217);
     c.uiTextDim  = QColor(139, 148, 158);
     c.uiAccent   = QColor(58,  145, 208);
+
+    c.topBarBg     = QColor(13,  17,  23);
+    c.toolbarBg    = QColor(22,  27,  34);
+    c.statusBarBg  = QColor(13,  17,  23);
+    c.treeBg       = QColor(13,  17,  23);
+    c.treeSelected = QColor(31,  111, 235, 40);
+    c.buttonBg     = QColor(33,  38,  45);
+    c.buttonText   = QColor(139, 148, 158);
+    c.inputBg      = QColor(22,  27,  34);
+    c.inputBorder  = QColor(48,  54,  61);
+}
+
+// ── Theme Presets ────────────────────────────────────────────────────────────
+
+static AppColors midnight()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+
+    c.topBarBg = QColor(13, 17, 23); c.toolbarBg = QColor(22, 27, 34);
+    c.statusBarBg = QColor(13, 17, 23); c.treeBg = QColor(13, 17, 23);
+    c.treeSelected = QColor(31, 111, 235, 40); c.buttonBg = QColor(33, 38, 45);
+    c.buttonText = QColor(139, 148, 158); c.inputBg = QColor(22, 27, 34);
+    c.inputBorder = QColor(48, 54, 61);
+    return c;
+}
+
+static AppColors ocean()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(0,  100, 200); c.mapBand[1] = QColor(0,  180, 180);
+    c.mapBand[2] = QColor(0,  140, 255); c.mapBand[3] = QColor(80, 200, 255);
+    c.mapBand[4] = QColor(0,  80,  160);
+    c.waveRow[0] = QColor(0,  150, 255); c.waveRow[1] = QColor(0,  200, 200);
+    c.waveRow[2] = QColor(60, 180, 255); c.waveRow[3] = QColor(0,  220, 160);
+    c.hexBg = QColor(2, 8, 22); c.hexText = QColor(160, 210, 255);
+    c.hexModified = QColor(0, 255, 200); c.hexSelected = QColor(0, 60, 140);
+    c.hexOffset = QColor(40, 100, 180); c.hexHeaderBg = QColor(4, 14, 35);
+    c.hexHeaderText = QColor(0, 160, 255); c.hexBarDefault = QColor(40, 100, 160);
+    c.mapCellBg = QColor(0, 20, 60); c.mapCellText = QColor(180, 230, 255);
+    c.mapCellModified = QColor(0, 255, 180); c.mapGridLine = QColor(0, 15, 45);
+    c.mapAxisXBg = QColor(0, 30, 70); c.mapAxisXText = QColor(60, 200, 255);
+    c.mapAxisYBg = QColor(0, 25, 55); c.mapAxisYText = QColor(0, 220, 200);
+    c.waveBg = QColor(2, 6, 18); c.waveLine = QColor(0, 160, 255);
+    c.waveGridMajor = QColor(10, 40, 80); c.waveGridMinor = QColor(5, 20, 45);
+    c.waveOverviewBg = QColor(2, 5, 15);
+    c.uiBg = QColor(3, 10, 22); c.uiPanel = QColor(6, 18, 38);
+    c.uiBorder = QColor(15, 45, 85); c.uiText = QColor(170, 215, 255);
+    c.uiTextDim = QColor(60, 120, 180); c.uiAccent = QColor(0, 140, 255);
+
+    c.topBarBg = QColor(2, 6, 18); c.toolbarBg = QColor(6, 18, 38);
+    c.statusBarBg = QColor(2, 6, 18); c.treeBg = QColor(3, 10, 22);
+    c.treeSelected = QColor(0, 100, 200, 40); c.buttonBg = QColor(10, 35, 65);
+    c.buttonText = QColor(100, 180, 255); c.inputBg = QColor(6, 18, 38);
+    c.inputBorder = QColor(15, 45, 85);
+    return c;
+}
+
+static AppColors forest()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(40, 160, 60); c.mapBand[1] = QColor(120, 180, 40);
+    c.mapBand[2] = QColor(0,  200, 120); c.mapBand[3] = QColor(180, 200, 60);
+    c.mapBand[4] = QColor(60, 130, 80);
+    c.waveRow[0] = QColor(80, 220, 80); c.waveRow[1] = QColor(160, 200, 40);
+    c.waveRow[2] = QColor(0, 200, 140); c.waveRow[3] = QColor(200, 220, 80);
+    c.hexBg = QColor(5, 16, 5); c.hexText = QColor(180, 240, 180);
+    c.hexModified = QColor(255, 220, 0); c.hexSelected = QColor(20, 80, 30);
+    c.hexOffset = QColor(60, 140, 60); c.hexHeaderBg = QColor(8, 24, 10);
+    c.hexHeaderText = QColor(40, 200, 80); c.hexBarDefault = QColor(50, 120, 50);
+    c.mapCellBg = QColor(0, 50, 20); c.mapCellText = QColor(200, 255, 200);
+    c.mapCellModified = QColor(255, 255, 0); c.mapGridLine = QColor(0, 35, 12);
+    c.mapAxisXBg = QColor(5, 40, 15); c.mapAxisXText = QColor(80, 255, 120);
+    c.mapAxisYBg = QColor(20, 35, 5); c.mapAxisYText = QColor(220, 220, 80);
+    c.waveBg = QColor(3, 12, 4); c.waveLine = QColor(50, 220, 80);
+    c.waveGridMajor = QColor(15, 50, 20); c.waveGridMinor = QColor(8, 30, 10);
+    c.waveOverviewBg = QColor(2, 8, 3);
+    c.uiBg = QColor(5, 12, 6); c.uiPanel = QColor(10, 25, 14);
+    c.uiBorder = QColor(25, 55, 30); c.uiText = QColor(180, 230, 180);
+    c.uiTextDim = QColor(80, 140, 80); c.uiAccent = QColor(40, 200, 80);
+
+    c.topBarBg = QColor(4, 10, 5); c.toolbarBg = QColor(10, 25, 14);
+    c.statusBarBg = QColor(4, 10, 5); c.treeBg = QColor(5, 12, 6);
+    c.treeSelected = QColor(40, 160, 60, 40); c.buttonBg = QColor(15, 40, 20);
+    c.buttonText = QColor(100, 200, 120); c.inputBg = QColor(10, 25, 14);
+    c.inputBorder = QColor(25, 55, 30);
+    return c;
+}
+
+static AppColors volcanic()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(255, 80, 20); c.mapBand[1] = QColor(255, 160, 0);
+    c.mapBand[2] = QColor(200, 40, 0);  c.mapBand[3] = QColor(255, 200, 40);
+    c.mapBand[4] = QColor(180, 60, 20);
+    c.waveRow[0] = QColor(255, 100, 30); c.waveRow[1] = QColor(255, 180, 0);
+    c.waveRow[2] = QColor(220, 50, 0);   c.waveRow[3] = QColor(255, 220, 60);
+    c.hexBg = QColor(18, 6, 2); c.hexText = QColor(255, 210, 180);
+    c.hexModified = QColor(255, 255, 0); c.hexSelected = QColor(120, 40, 10);
+    c.hexOffset = QColor(180, 100, 50); c.hexHeaderBg = QColor(28, 10, 4);
+    c.hexHeaderText = QColor(255, 140, 40); c.hexBarDefault = QColor(140, 70, 30);
+    c.mapCellBg = QColor(120, 15, 0); c.mapCellText = QColor(255, 230, 200);
+    c.mapCellModified = QColor(255, 255, 80); c.mapGridLine = QColor(80, 10, 0);
+    c.mapAxisXBg = QColor(60, 15, 0); c.mapAxisXText = QColor(255, 180, 60);
+    c.mapAxisYBg = QColor(50, 25, 0); c.mapAxisYText = QColor(255, 220, 80);
+    c.waveBg = QColor(14, 4, 2); c.waveLine = QColor(255, 100, 20);
+    c.waveGridMajor = QColor(50, 18, 8); c.waveGridMinor = QColor(30, 10, 4);
+    c.waveOverviewBg = QColor(10, 3, 1);
+    c.uiBg = QColor(14, 6, 3); c.uiPanel = QColor(28, 12, 6);
+    c.uiBorder = QColor(65, 28, 12); c.uiText = QColor(255, 220, 190);
+    c.uiTextDim = QColor(160, 90, 50); c.uiAccent = QColor(255, 120, 20);
+
+    c.topBarBg = QColor(12, 4, 2); c.toolbarBg = QColor(28, 12, 6);
+    c.statusBarBg = QColor(12, 4, 2); c.treeBg = QColor(14, 6, 3);
+    c.treeSelected = QColor(200, 60, 10, 40); c.buttonBg = QColor(50, 20, 8);
+    c.buttonText = QColor(255, 160, 80); c.inputBg = QColor(28, 12, 6);
+    c.inputBorder = QColor(65, 28, 12);
+    return c;
+}
+
+static AppColors arctic()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(40, 100, 180); c.mapBand[1] = QColor(0, 130, 140);
+    c.mapBand[2] = QColor(50, 140, 50);  c.mapBand[3] = QColor(160, 100, 20);
+    c.mapBand[4] = QColor(120, 60, 160);
+    c.waveRow[0] = QColor(20, 80, 180); c.waveRow[1] = QColor(0, 120, 120);
+    c.waveRow[2] = QColor(40, 120, 40);  c.waveRow[3] = QColor(140, 80, 10);
+    c.hexBg = QColor(248, 250, 252); c.hexText = QColor(25, 35, 55);
+    c.hexModified = QColor(190, 50, 0); c.hexSelected = QColor(180, 205, 235);
+    c.hexOffset = QColor(70, 95, 135); c.hexHeaderBg = QColor(230, 236, 245);
+    c.hexHeaderText = QColor(20, 60, 130); c.hexBarDefault = QColor(120, 145, 175);
+    c.mapCellBg = QColor(45, 80, 140); c.mapCellText = QColor(245, 250, 255);
+    c.mapCellModified = QColor(255, 210, 0); c.mapGridLine = QColor(35, 65, 115);
+    c.mapAxisXBg = QColor(230, 238, 248); c.mapAxisXText = QColor(15, 55, 120);
+    c.mapAxisYBg = QColor(235, 240, 248); c.mapAxisYText = QColor(30, 80, 150);
+    c.waveBg = QColor(248, 250, 253); c.waveLine = QColor(20, 70, 160);
+    c.waveGridMajor = QColor(218, 226, 238); c.waveGridMinor = QColor(232, 238, 246);
+    c.waveOverviewBg = QColor(240, 244, 250);
+    c.uiBg = QColor(244, 247, 251); c.uiPanel = QColor(232, 238, 246);
+    c.uiBorder = QColor(200, 212, 230); c.uiText = QColor(20, 35, 55);
+    c.uiTextDim = QColor(80, 105, 140); c.uiAccent = QColor(20, 85, 185);
+
+    c.topBarBg = QColor(52, 72, 100); c.toolbarBg = QColor(62, 82, 112);
+    c.statusBarBg = QColor(48, 68, 96); c.treeBg = QColor(240, 244, 250);
+    c.treeSelected = QColor(20, 85, 185, 35); c.buttonBg = QColor(222, 230, 242);
+    c.buttonText = QColor(30, 50, 80); c.inputBg = QColor(250, 252, 254);
+    c.inputBorder = QColor(200, 212, 230);
+    return c;
+}
+
+static AppColors cyberpunk()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(255, 0, 200); c.mapBand[1] = QColor(0, 255, 255);
+    c.mapBand[2] = QColor(180, 0, 255); c.mapBand[3] = QColor(255, 255, 0);
+    c.mapBand[4] = QColor(0, 200, 255);
+    c.waveRow[0] = QColor(255, 0, 180); c.waveRow[1] = QColor(0, 255, 255);
+    c.waveRow[2] = QColor(200, 0, 255); c.waveRow[3] = QColor(255, 255, 0);
+    c.hexBg = QColor(10, 0, 18); c.hexText = QColor(0, 255, 255);
+    c.hexModified = QColor(255, 0, 200); c.hexSelected = QColor(80, 0, 120);
+    c.hexOffset = QColor(140, 0, 200); c.hexHeaderBg = QColor(18, 0, 30);
+    c.hexHeaderText = QColor(255, 0, 255); c.hexBarDefault = QColor(100, 0, 160);
+    c.mapCellBg = QColor(30, 0, 60); c.mapCellText = QColor(0, 255, 255);
+    c.mapCellModified = QColor(255, 0, 200); c.mapGridLine = QColor(20, 0, 40);
+    c.mapAxisXBg = QColor(40, 0, 70); c.mapAxisXText = QColor(255, 0, 255);
+    c.mapAxisYBg = QColor(50, 0, 40); c.mapAxisYText = QColor(0, 255, 200);
+    c.waveBg = QColor(8, 0, 14); c.waveLine = QColor(0, 255, 255);
+    c.waveGridMajor = QColor(30, 0, 50); c.waveGridMinor = QColor(18, 0, 30);
+    c.waveOverviewBg = QColor(6, 0, 10);
+    c.uiBg = QColor(8, 0, 16); c.uiPanel = QColor(18, 0, 30);
+    c.uiBorder = QColor(50, 0, 80); c.uiText = QColor(0, 255, 255);
+    c.uiTextDim = QColor(100, 0, 160); c.uiAccent = QColor(255, 0, 200);
+
+    c.topBarBg = QColor(6, 0, 12); c.toolbarBg = QColor(18, 0, 30);
+    c.statusBarBg = QColor(6, 0, 12); c.treeBg = QColor(8, 0, 16);
+    c.treeSelected = QColor(255, 0, 200, 30); c.buttonBg = QColor(30, 0, 50);
+    c.buttonText = QColor(0, 255, 255); c.inputBg = QColor(18, 0, 30);
+    c.inputBorder = QColor(50, 0, 80);
+    return c;
+}
+
+static AppColors solarized()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(220, 50, 47); c.mapBand[1] = QColor(38, 139, 210);
+    c.mapBand[2] = QColor(133, 153, 0); c.mapBand[3] = QColor(181, 137, 0);
+    c.mapBand[4] = QColor(108, 113, 196);
+    c.waveRow[0] = QColor(38, 139, 210); c.waveRow[1] = QColor(133, 153, 0);
+    c.waveRow[2] = QColor(203, 75, 22);  c.waveRow[3] = QColor(42, 161, 152);
+    c.hexBg = QColor(0, 43, 54); c.hexText = QColor(131, 148, 150);
+    c.hexModified = QColor(181, 137, 0); c.hexSelected = QColor(7, 54, 66);
+    c.hexOffset = QColor(88, 110, 117); c.hexHeaderBg = QColor(7, 54, 66);
+    c.hexHeaderText = QColor(38, 139, 210); c.hexBarDefault = QColor(88, 110, 117);
+    c.mapCellBg = QColor(7, 54, 66); c.mapCellText = QColor(238, 232, 213);
+    c.mapCellModified = QColor(181, 137, 0); c.mapGridLine = QColor(0, 43, 54);
+    c.mapAxisXBg = QColor(0, 43, 54); c.mapAxisXText = QColor(42, 161, 152);
+    c.mapAxisYBg = QColor(7, 54, 66); c.mapAxisYText = QColor(203, 75, 22);
+    c.waveBg = QColor(0, 43, 54); c.waveLine = QColor(38, 139, 210);
+    c.waveGridMajor = QColor(7, 54, 66); c.waveGridMinor = QColor(0, 43, 54);
+    c.waveOverviewBg = QColor(0, 36, 46);
+    c.uiBg = QColor(0, 43, 54); c.uiPanel = QColor(7, 54, 66);
+    c.uiBorder = QColor(88, 110, 117); c.uiText = QColor(147, 161, 161);
+    c.uiTextDim = QColor(88, 110, 117); c.uiAccent = QColor(38, 139, 210);
+
+    c.topBarBg = QColor(0, 36, 46); c.toolbarBg = QColor(7, 54, 66);
+    c.statusBarBg = QColor(0, 36, 46); c.treeBg = QColor(0, 43, 54);
+    c.treeSelected = QColor(38, 139, 210, 30); c.buttonBg = QColor(7, 54, 66);
+    c.buttonText = QColor(131, 148, 150); c.inputBg = QColor(7, 54, 66);
+    c.inputBorder = QColor(88, 110, 117);
+    return c;
+}
+
+static AppColors monokai()
+{
+    AppColors c;
+    AppConfig::applyDefaults(c);
+    c.mapBand[0] = QColor(249, 38, 114); c.mapBand[1] = QColor(102, 217, 239);
+    c.mapBand[2] = QColor(166, 226, 46); c.mapBand[3] = QColor(253, 151, 31);
+    c.mapBand[4] = QColor(174, 129, 255);
+    c.waveRow[0] = QColor(166, 226, 46); c.waveRow[1] = QColor(102, 217, 239);
+    c.waveRow[2] = QColor(249, 38, 114); c.waveRow[3] = QColor(253, 151, 31);
+    c.hexBg = QColor(39, 40, 34); c.hexText = QColor(248, 248, 242);
+    c.hexModified = QColor(230, 219, 116); c.hexSelected = QColor(73, 72, 62);
+    c.hexOffset = QColor(117, 113, 94); c.hexHeaderBg = QColor(49, 50, 44);
+    c.hexHeaderText = QColor(102, 217, 239); c.hexBarDefault = QColor(100, 100, 80);
+    c.mapCellBg = QColor(49, 50, 44); c.mapCellText = QColor(248, 248, 242);
+    c.mapCellModified = QColor(249, 38, 114); c.mapGridLine = QColor(39, 40, 34);
+    c.mapAxisXBg = QColor(39, 40, 34); c.mapAxisXText = QColor(166, 226, 46);
+    c.mapAxisYBg = QColor(45, 46, 38); c.mapAxisYText = QColor(253, 151, 31);
+    c.waveBg = QColor(39, 40, 34); c.waveLine = QColor(166, 226, 46);
+    c.waveGridMajor = QColor(58, 59, 50); c.waveGridMinor = QColor(49, 50, 42);
+    c.waveOverviewBg = QColor(34, 35, 30);
+    c.uiBg = QColor(39, 40, 34); c.uiPanel = QColor(49, 50, 44);
+    c.uiBorder = QColor(73, 72, 62); c.uiText = QColor(248, 248, 242);
+    c.uiTextDim = QColor(117, 113, 94); c.uiAccent = QColor(102, 217, 239);
+
+    c.topBarBg = QColor(34, 35, 30); c.toolbarBg = QColor(49, 50, 44);
+    c.statusBarBg = QColor(34, 35, 30); c.treeBg = QColor(39, 40, 34);
+    c.treeSelected = QColor(102, 217, 239, 30); c.buttonBg = QColor(58, 59, 50);
+    c.buttonText = QColor(248, 248, 242); c.inputBg = QColor(49, 50, 44);
+    c.inputBorder = QColor(73, 72, 62);
+    return c;
+}
+
+const QVector<ColorTheme> &ColorThemes::all()
+{
+    static QVector<ColorTheme> themes = {
+        { "midnight",  "Midnight (Default)", midnight() },
+        { "ocean",     "Ocean Deep",         ocean() },
+        { "forest",    "Dark Forest",        forest() },
+        { "volcanic",  "Volcanic",           volcanic() },
+        { "arctic",    "Arctic",             arctic() },
+        { "cyberpunk", "Cyberpunk",          cyberpunk() },
+        { "solarized", "Solarized Dark",     solarized() },
+        { "monokai",   "Monokai",            monokai() },
+    };
+    return themes;
 }
 
 void AppConfig::load()
@@ -110,7 +374,16 @@ void AppConfig::load()
     colors.uiBorder  = rd("colors/uiBorder",  def.uiBorder);
     colors.uiText    = rd("colors/uiText",    def.uiText);
     colors.uiTextDim = rd("colors/uiTextDim", def.uiTextDim);
-    colors.uiAccent  = rd("colors/uiAccent",  def.uiAccent);
+    colors.uiAccent      = rd("colors/uiAccent",      def.uiAccent);
+    colors.topBarBg      = rd("colors/topBarBg",      def.topBarBg);
+    colors.toolbarBg     = rd("colors/toolbarBg",     def.toolbarBg);
+    colors.statusBarBg   = rd("colors/statusBarBg",   def.statusBarBg);
+    colors.treeBg        = rd("colors/treeBg",        def.treeBg);
+    colors.treeSelected  = rd("colors/treeSelected",  def.treeSelected);
+    colors.buttonBg      = rd("colors/buttonBg",      def.buttonBg);
+    colors.buttonText    = rd("colors/buttonText",    def.buttonText);
+    colors.inputBg       = rd("colors/inputBg",       def.inputBg);
+    colors.inputBorder   = rd("colors/inputBorder",   def.inputBorder);
     showLongMapNames = s.value("display/showLongMapNames", true).toBool();
 
     int pm = s.value("aiassistant/permissionMode",
@@ -158,7 +431,16 @@ void AppConfig::save()
     wr("colors/uiBorder",  colors.uiBorder);
     wr("colors/uiText",    colors.uiText);
     wr("colors/uiTextDim", colors.uiTextDim);
-    wr("colors/uiAccent",  colors.uiAccent);
+    wr("colors/uiAccent",      colors.uiAccent);
+    wr("colors/topBarBg",      colors.topBarBg);
+    wr("colors/toolbarBg",     colors.toolbarBg);
+    wr("colors/statusBarBg",   colors.statusBarBg);
+    wr("colors/treeBg",        colors.treeBg);
+    wr("colors/treeSelected",  colors.treeSelected);
+    wr("colors/buttonBg",      colors.buttonBg);
+    wr("colors/buttonText",    colors.buttonText);
+    wr("colors/inputBg",       colors.inputBg);
+    wr("colors/inputBorder",   colors.inputBorder);
     s.setValue("display/showLongMapNames", showLongMapNames);
     s.setValue("aiassistant/permissionMode", static_cast<int>(aiPermissionMode));
 

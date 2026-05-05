@@ -20,6 +20,7 @@
 #include "mainwindow.h"
 #include "logger.h"
 #include "version.h"
+#include "appconfig.h"
 #include "uiwidgets.h"
 
 #ifdef Q_OS_WIN
@@ -215,6 +216,31 @@ static LONG WINAPI windowsExceptionFilter(EXCEPTION_POINTERS *ep)
 }
 #endif
 
+#ifdef RX14_PRO_BUILD
+// ── Anti-debug: detect debuggers (release builds only) ───────────────────────
+#ifndef QT_DEBUG
+static bool isDebuggerAttached() {
+#ifdef Q_OS_WIN
+    if (IsDebuggerPresent()) return true;
+    BOOL remoteDebugger = FALSE;
+    CheckRemoteDebuggerPresent(GetCurrentProcess(), &remoteDebugger);
+    if (remoteDebugger) return true;
+#endif
+#ifdef Q_OS_LINUX
+    QFile f("/proc/self/status");
+    if (f.open(QIODevice::ReadOnly)) {
+        QByteArray data = f.readAll();
+        int idx = data.indexOf("TracerPid:");
+        if (idx >= 0) {
+            int pid = data.mid(idx + 10).trimmed().split('\n')[0].toInt();
+            if (pid != 0) return true;
+        }
+    }
+#endif
+    return false;
+}
+#endif
+#endif // RX14_PRO_BUILD
 
 // ─────────────────────────────────────────────────────────────────────────────
 int main(int argc, char *argv[])
@@ -254,6 +280,14 @@ int main(int argc, char *argv[])
     // ── Qt message handler ─────────────────────────────────────────────────
     qInstallMessageHandler(qtMessageHandler);
 
+#ifdef RX14_PRO_BUILD
+    // ── Anti-debug check (release builds only) ────────────────────────────
+#ifndef QT_DEBUG
+    if (isDebuggerAttached()) {
+        return 1;
+    }
+#endif
+#endif // RX14_PRO_BUILD
 
     // ── Application ────────────────────────────────────────────────────────
     QApplication app(argc, argv);
@@ -373,9 +407,21 @@ int main(int argc, char *argv[])
             QDialog QFormLayout { spacing: 10px; }
         )");
 #endif
-        // Append the design-system object styles so #primary / #destructive /
-        // #flat buttons, [role="card"] frames, and [role="pill"] labels are
-        // styled app-wide via a single source of truth (src/uiwidgets.cpp).
+        // Substitute color placeholders with defaults before setting stylesheet
+        {
+            AppColors c;
+            AppConfig::applyDefaults(c);
+            styleSheet.replace("${uiBg}",          c.uiBg.name());
+            styleSheet.replace("${uiPanel}",       c.uiPanel.name());
+            styleSheet.replace("${buttonBg}",      c.buttonBg.name());
+            styleSheet.replace("${uiBorder}",      c.uiBorder.name());
+            styleSheet.replace("${uiAccent}",      c.uiAccent.name());
+            styleSheet.replace("${uiAccentHover}", c.uiAccent.lighter(120).name());
+            styleSheet.replace("${uiAccentLight}", c.uiAccent.lighter(140).name());
+            styleSheet.replace("${uiTextDim}",     c.uiTextDim.name());
+            styleSheet.replace("${uiText}",        c.uiText.name());
+        }
+        // Append the design-system object styles
         styleSheet += Theme::objectStyles();
         app.setStyleSheet(styleSheet);
     }
@@ -387,7 +433,11 @@ int main(int argc, char *argv[])
     try {
         MainWindow w;
         w.setWindowIcon(QIcon(":/icon.png"));
+#ifdef RX14_PRO_BUILD
+        w.setWindowTitle("romHEX 14");
+#else
         w.setWindowTitle("romHEX 14 Community");
+#endif
         w.resize(1400, 850);
         w.show();
 

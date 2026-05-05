@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "appconstants.h"
-#include "communityupdatechecker.h"
 #include "hexcomparedlg.h"
 #include "diffpanel.h"
 #include "savepoints/SavepointManager.h"
@@ -328,7 +327,7 @@ static QIcon makeGradientIcon()
     g.setColorAt(0.66, QColor(0xff,0xaa,0x00));
     g.setColorAt(1.0,  QColor(0xff,0x22,0x00));
     p.setBrush(g);
-    p.setPen(QPen(QColor("#30363d"), 1));
+    p.setPen(QPen(QColor("" + AppConfig::instance().colors.uiBorder.name() + ""), 1));
     p.drawRoundedRect(2, 7, 18, 8, 2, 2);
     return QIcon(pm);
 }
@@ -341,6 +340,8 @@ static QString fmtSize(qint64 b)
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -391,6 +392,14 @@ MainWindow::MainWindow(QWidget *parent)
     buildActions();
     buildMenuBar();
     buildToolBars();
+
+    // Ensure Preferences is ALWAYS visible in Misc menu — guard on every show
+    connect(m_menuMisc, &QMenu::aboutToShow, this, [this]() {
+        if (m_actPreferences && !m_menuMisc->actions().contains(m_actPreferences)) {
+            m_menuMisc->addSeparator();
+            m_menuMisc->addAction(m_actPreferences);
+        }
+    });
 
     connect(m_mdi, &QMdiArea::subWindowActivated,
             this,  &MainWindow::onSubWindowActivated);
@@ -446,7 +455,36 @@ MainWindow::MainWindow(QWidget *parent)
     AppConfig::instance().load();
     applyUiTheme();
     connect(&AppConfig::instance(), &AppConfig::colorsChanged,
-            this, &MainWindow::applyUiTheme);
+            this, [this]() {
+        applyUiTheme();
+        // DON'T rebuild the left panel — it causes tree state loss
+        // and layout glitches. The global QSS handles backgrounds.
+        // Just force repaint on the tree and its children.
+        if (m_projectTree) {
+            m_projectTree->update();
+            m_projectTree->viewport()->update();
+        }
+        // Rebuild welcome page
+        if (m_welcomePage && m_centralStack) {
+            const int prevIdx = m_centralStack->currentIndex();
+            const int wIdx = m_centralStack->indexOf(m_welcomePage);
+            if (wIdx >= 0) m_centralStack->removeWidget(m_welcomePage);
+            m_welcomePage->deleteLater();
+            m_welcomePage = nullptr;
+            buildWelcomePage();
+            m_centralStack->insertWidget(0, m_welcomePage);
+            m_centralStack->setCurrentIndex(prevIdx);
+        }
+        // Close and reopen all MDI subwindows so they reconstruct
+        // with fresh AppConfig color reads
+        QList<QMdiSubWindow*> subs = m_mdi->subWindowList();
+        for (auto *sub : subs) {
+            if (sub->widget())
+                sub->widget()->update();
+            for (auto *child : sub->widget()->findChildren<QWidget*>())
+                child->update();
+        }
+    });
 
     // ── Update checker ─────────────────────────────────────────────────
     m_updateBar = new QFrame();
@@ -474,7 +512,7 @@ MainWindow::MainWindow(QWidget *parent)
     pulseTimer->start(800);
 
     m_updateLabel = new QLabel();
-    m_updateLabel->setStyleSheet("color:#e7eefc;font-size:9pt;font-weight:500");
+    m_updateLabel->setStyleSheet("color:" + AppConfig::instance().colors.uiText.name() + ";font-size:9pt;font-weight:500");
     ubLay->addWidget(m_updateLabel, 1);
     m_updateProgress = new QProgressBar();
     m_updateProgress->setFixedWidth(160);
@@ -484,7 +522,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_updateProgress->setStyleSheet(
         "QProgressBar{background:rgba(255,255,255,.08);border:none;border-radius:3px}"
         "QProgressBar::chunk{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-        "stop:0 #1f6feb,stop:1 #7c3aed);border-radius:3px}");
+        "stop:0 " + AppConfig::instance().colors.uiAccent.name() + ",stop:1 #7c3aed);border-radius:3px}");
     m_updateProgress->hide();
     ubLay->addWidget(m_updateProgress);
     m_updateBtn = new QPushButton(tr("Update Now"));
@@ -492,16 +530,16 @@ MainWindow::MainWindow(QWidget *parent)
     ubBtn->setCursor(Qt::PointingHandCursor);
     ubBtn->setStyleSheet(
         "QPushButton{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-        "stop:0 #1f6feb,stop:1 #7c3aed);color:white;border:none;border-radius:4px;"
+        "stop:0 " + AppConfig::instance().colors.uiAccent.name() + ",stop:1 #7c3aed);color:white;border:none;border-radius:4px;"
         "padding:5px 20px;font-weight:bold;font-size:9pt}"
         "QPushButton:hover{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-        "stop:0 #388bfd,stop:1 #9b5de5)}");
+        "stop:0 " + AppConfig::instance().colors.uiAccent.lighter(120).name() + ",stop:1 #9b5de5)}");
     ubLay->addWidget(ubBtn);
     auto *ubClose = new QPushButton("\u2715");
     ubClose->setFixedSize(28,28);
     ubClose->setCursor(Qt::PointingHandCursor);
-    ubClose->setStyleSheet("QPushButton{background:none;color:#8b949e;border:none;font-size:11pt}"
-                           "QPushButton:hover{color:#e7eefc}");
+    ubClose->setStyleSheet("QPushButton{background:none;color:" + AppConfig::instance().colors.uiTextDim.name() + ";border:none;font-size:11pt}"
+                           "QPushButton:hover{color:" + AppConfig::instance().colors.uiText.name() + "}");
     ubLay->addWidget(ubClose);
     // Insert update bar above the central widget
     auto *centralWrap = new QWidget();
@@ -556,10 +594,10 @@ MainWindow::MainWindow(QWidget *parent)
             auto *dlg = new QDialog(this);
             dlg->setWindowTitle(tr("Updates"));
             dlg->setFixedSize(380, 200);
-            dlg->setStyleSheet("QDialog{background:#0d1117;border:1px solid #21262d}"
-                "QLabel{color:#e7eefc}QPushButton{background:#1f6feb;color:white;"
+            dlg->setStyleSheet("QDialog{background:" + AppConfig::instance().colors.uiBg.name() + ";border:1px solid " + AppConfig::instance().colors.buttonBg.name() + "}"
+                "QLabel{color:" + AppConfig::instance().colors.uiText.name() + "}QPushButton{background:" + AppConfig::instance().colors.uiAccent.name() + ";color:white;"
                 "border:none;border-radius:6px;padding:8px 24px;font-weight:bold}"
-                "QPushButton:hover{background:#388bfd}");
+                "QPushButton:hover{background:" + AppConfig::instance().colors.uiAccent.lighter(120).name() + "}");
             auto *lay = new QVBoxLayout(dlg);
             lay->setAlignment(Qt::AlignCenter);
             lay->setSpacing(12);
@@ -569,7 +607,7 @@ MainWindow::MainWindow(QWidget *parent)
             lay->addWidget(icon);
             auto *msg = new QLabel(tr("You are running the latest version (v%1).")
                 .arg(UpdateChecker::currentVersion()));
-            msg->setStyleSheet("font-size:11pt;color:#8b949e");
+            msg->setStyleSheet("font-size:11pt;color:" + AppConfig::instance().colors.uiTextDim.name() + "");
             msg->setAlignment(Qt::AlignCenter);
             msg->setWordWrap(true);
             lay->addWidget(msg);
@@ -587,8 +625,8 @@ MainWindow::MainWindow(QWidget *parent)
             auto *dlg = new QDialog(this);
             dlg->setWindowTitle(tr("Update Check Failed"));
             dlg->setFixedSize(400, 200);
-            dlg->setStyleSheet("QDialog{background:#0d1117;border:1px solid #21262d}"
-                "QLabel{color:#e7eefc}QPushButton{background:#da3633;color:white;"
+            dlg->setStyleSheet("QDialog{background:" + AppConfig::instance().colors.uiBg.name() + ";border:1px solid " + AppConfig::instance().colors.buttonBg.name() + "}"
+                "QLabel{color:" + AppConfig::instance().colors.uiText.name() + "}QPushButton{background:#da3633;color:white;"
                 "border:none;border-radius:6px;padding:8px 24px;font-weight:bold}"
                 "QPushButton:hover{background:#f85149}");
             auto *lay = new QVBoxLayout(dlg);
@@ -705,27 +743,6 @@ MainWindow::MainWindow(QWidget *parent)
         if (ApiClient::instance().isLoggedIn())
             ApiClient::instance().refreshEntitlements();
     });
-
-    // ── Community update check (silent, 5s after launch) ──────────────
-    // qWarning() << "COMMUNITY UPDATE CHECKER: setting up";
-    {
-        auto *checker = new CommunityUpdateChecker(this);
-        connect(checker, &CommunityUpdateChecker::updateAvailable,
-                this, [this](const QString &ver, const QString &url) {
-            m_updateUrl = url;
-            m_updateLabel->setText(tr("Update available: <b>v%1</b>").arg(ver));
-            m_updateBtn->setText(tr("View on GitHub"));
-            m_updateBtn->disconnect();
-            connect(m_updateBtn, &QPushButton::clicked, this, [url]() {
-                QDesktopServices::openUrl(QUrl(url));
-            });
-            m_updateBar->show();
-        });
-        QTimer::singleShot(5000, this, [checker]() {
-            // qWarning() << "Update checker: firing now";
-            checker->checkForUpdates();
-        });
-    }
 
     // ── Load saved language (retranslates UI if not English) ──────────
     QString lang = rx14::appSettings()
@@ -940,22 +957,22 @@ void MainWindow::buildLeftPanel()
 
     // Title bar
     auto *titleBar = new QWidget();
-    titleBar->setStyleSheet("background:#161b22; border-bottom:1px solid #30363d;");
+    titleBar->setStyleSheet("background:" + AppConfig::instance().colors.uiPanel.name() + "; border-bottom:1px solid " + AppConfig::instance().colors.uiBorder.name() + ";");
     auto *titleLay = new QHBoxLayout(titleBar);
     titleLay->setContentsMargins(8, 5, 8, 5);
     m_leftPanelTitle = new QLabel(tr("Map Selection"));
     m_leftPanelTitle->setStyleSheet(
-        "color:#8b949e; font-size:8pt; font-weight:bold;"
+        "color:" + AppConfig::instance().colors.uiTextDim.name() + "; font-size:8pt; font-weight:bold;"
         "letter-spacing:0.5px; text-transform:uppercase; background:transparent;");
     titleLay->addWidget(m_leftPanelTitle);
     titleLay->addStretch();
 
     // Font size control — –  9pt  +
     const QString fsBtnSS =
-        "QPushButton { background:#21262d; color:#8b949e; border:1px solid #30363d;"
+        "QPushButton { background:" + AppConfig::instance().colors.buttonBg.name() + "; color:" + AppConfig::instance().colors.uiTextDim.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + ";"
         " border-radius:3px; font-size:11pt; font-weight:bold; padding:0; }"
-        "QPushButton:hover  { background:#30363d; color:#e6edf3; }"
-        "QPushButton:pressed{ background:#1f6feb; color:#fff; border-color:#1f6feb; }";
+        "QPushButton:hover  { background:" + AppConfig::instance().colors.uiBorder.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; }"
+        "QPushButton:pressed{ background:" + AppConfig::instance().colors.uiAccent.name() + "; color:#fff; border-color:" + AppConfig::instance().colors.uiAccent.name() + "; }";
 
     auto *btnFsMinus = new QPushButton("−");
     btnFsMinus->setFixedSize(28, 28);
@@ -965,7 +982,7 @@ void MainWindow::buildLeftPanel()
     m_treeFontLabel = new QLabel(QString("%1").arg(m_treeFontSize));
     m_treeFontLabel->setFixedWidth(28);
     m_treeFontLabel->setAlignment(Qt::AlignCenter);
-    m_treeFontLabel->setStyleSheet("color:#8b949e; font-size:7.5pt; background:transparent;");
+    m_treeFontLabel->setStyleSheet("color:" + AppConfig::instance().colors.uiTextDim.name() + "; font-size:7.5pt; background:transparent;");
 
     auto *btnFsPlus = new QPushButton("+");
     btnFsPlus->setFixedSize(28, 28);
@@ -999,10 +1016,10 @@ void MainWindow::buildLeftPanel()
     m_btnTranslateAll = new QPushButton(tr("✦ AI Translate"));
     m_btnTranslateAll->setFixedHeight(20);
     m_btnTranslateAll->setStyleSheet(
-        "QPushButton { background:#1a2a45; color:#58a6ff; border:1px solid #1f6feb;"
+        "QPushButton { background:#1a2a45; color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; border:1px solid " + AppConfig::instance().colors.uiAccent.name() + ";"
         " border-radius:3px; font-size:7pt; font-weight:bold; padding:0 7px; }"
-        "QPushButton:hover { background:#1f6feb; color:#fff; }"
-        "QPushButton:disabled { background:transparent; color:#30363d; border-color:#21262d; }");
+        "QPushButton:hover { background:" + AppConfig::instance().colors.uiAccent.name() + "; color:#fff; }"
+        "QPushButton:disabled { background:transparent; color:" + AppConfig::instance().colors.uiBorder.name() + "; border-color:" + AppConfig::instance().colors.buttonBg.name() + "; }");
     m_btnTranslateAll->setToolTip(tr("Sign in to use AI map translation"));
     m_btnTranslateAll->hide();
     titleLay->addWidget(m_btnTranslateAll);
@@ -1045,7 +1062,7 @@ void MainWindow::buildLeftPanel()
         auto *askSub = new QLabel(
             tr("Run a sample of 25 maps first to verify quality, or translate everything now."), &ask);
         askSub->setWordWrap(true);
-        askSub->setStyleSheet("color:#8b949e;");
+        askSub->setStyleSheet("color:" + AppConfig::instance().colors.uiTextDim.name() + ";");
 
         // Language row
         auto *langRow = new QHBoxLayout();
@@ -1267,7 +1284,7 @@ void MainWindow::buildLeftPanel()
 
     // ── Search bar ────────────────────────────────────────────────────────
     auto *filterBar = new QWidget();
-    filterBar->setStyleSheet("background:#0d1117; border-bottom:1px solid #21262d;");
+    filterBar->setStyleSheet("background:" + AppConfig::instance().colors.uiBg.name() + "; border-bottom:1px solid " + AppConfig::instance().colors.buttonBg.name() + ";");
     auto *filterLay = new QHBoxLayout(filterBar);
     filterLay->setContentsMargins(8, 6, 8, 6);
     filterLay->setSpacing(6);
@@ -1276,9 +1293,9 @@ void MainWindow::buildLeftPanel()
     m_filterEdit->setClearButtonEnabled(true);
     m_filterEdit->setMinimumHeight(26);
     m_filterEdit->setStyleSheet(
-        "QLineEdit { background:#161b22; color:#e6edf3; border:1px solid #30363d;"
+        "QLineEdit { background:" + AppConfig::instance().colors.uiPanel.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + ";"
         " border-radius:5px; padding:0 8px; font-size:9pt; }"
-        "QLineEdit:focus { border-color:#1f6feb; }");
+        "QLineEdit:focus { border-color:" + AppConfig::instance().colors.uiAccent.name() + "; }");
     filterLay->addWidget(m_filterEdit, 1);
 
     m_filterChangedBtn = new QPushButton();
@@ -1288,10 +1305,10 @@ void MainWindow::buildLeftPanel()
     m_filterChangedBtn->setIconSize(QSize(16, 16));
     m_filterChangedBtn->setToolTip(tr("Show only modified maps"));
     m_filterChangedBtn->setStyleSheet(
-        "QPushButton { background:#161b22; border:1px solid #30363d; border-radius:5px; }"
+        "QPushButton { background:" + AppConfig::instance().colors.uiPanel.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; border-radius:5px; }"
         "QPushButton:checked { border-color:#ff7b72; background:#2d1215; }"
-        "QPushButton:hover   { border-color:#8b949e; }"
-        "QPushButton:focus   { border:2px solid #58a6ff; }");
+        "QPushButton:hover   { border-color:" + AppConfig::instance().colors.uiTextDim.name() + "; }"
+        "QPushButton:focus   { border:2px solid " + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }");
     connect(m_filterChangedBtn, &QPushButton::toggled, this, [this](bool on) {
         m_filterChangedBtn->setIcon(makeIcon("●", on ? QColor("#ff7b72") : QColor("#7d8590")));
     });
@@ -1300,17 +1317,17 @@ void MainWindow::buildLeftPanel()
 
     // ── Filter chip bar — two rows ────────────────────────────────────────
     auto *chipBar = new QWidget();
-    chipBar->setStyleSheet("background:#0d1117; border-bottom:1px solid #21262d;");
+    chipBar->setStyleSheet("background:" + AppConfig::instance().colors.uiBg.name() + "; border-bottom:1px solid " + AppConfig::instance().colors.buttonBg.name() + ";");
     auto *chipGrid = new QVBoxLayout(chipBar);
     chipGrid->setContentsMargins(6, 5, 6, 5);
     chipGrid->setSpacing(4);
 
     const QString chipSS =
-        "QPushButton { background:#161b22; color:#c9d1d9; border:1px solid #30363d;"
+        "QPushButton { background:" + AppConfig::instance().colors.uiPanel.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiBorder.name() + ";"
         " border-radius:4px; font-size:8.5pt; padding:2px 0; text-align:center; min-width:0; min-height:0; }"
-        "QPushButton:checked { background:#1a2a45; color:#58a6ff; border-color:#1f6feb; font-weight:bold; }"
-        "QPushButton:hover:!checked { background:#1c2128; color:#e6edf3; border-color:#7d8590; }"
-        "QPushButton:focus { border:2px solid #58a6ff; }";
+        "QPushButton:checked { background:#1a2a45; color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; border-color:" + AppConfig::instance().colors.uiAccent.name() + "; font-weight:bold; }"
+        "QPushButton:hover:!checked { background:#1c2128; color:" + AppConfig::instance().colors.uiText.name() + "; border-color:#7d8590; }"
+        "QPushButton:focus { border:2px solid " + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }";
 
     auto makeChip = [&](const QString &sym, const QColor &iconCol,
                         const QString &label, QPushButton *&out,
@@ -1326,10 +1343,10 @@ void MainWindow::buildLeftPanel()
     // Row 1: All | Modified | Starred | Recent
     auto *row1 = new QHBoxLayout();
     row1->setSpacing(4);
-    makeChip("≡",  QColor("#8b949e"), tr("All"),      m_chipAll);
+    makeChip("≡",  QColor("" + AppConfig::instance().colors.uiTextDim.name() + ""), tr("All"),      m_chipAll);
     makeChip("Δ",  QColor("#f0883e"), tr("Modified"),  m_chipModified);
     makeChip("★",  QColor("#d4a017"), tr("Starred"),   m_chipStarred);
-    makeChip("◷",  QColor("#58a6ff"), tr("Recent"),    m_chipRecent);
+    makeChip("◷",  QColor("" + AppConfig::instance().colors.uiAccent.lighter(140).name() + ""), tr("Recent"),    m_chipRecent);
     row1->addWidget(m_chipAll,      1);
     row1->addWidget(m_chipModified, 2);
     row1->addWidget(m_chipStarred,  2);
@@ -1342,8 +1359,8 @@ void MainWindow::buildLeftPanel()
         "QPushButton:checked{background:#0d2a18;color:#3fb950;border-color:#2ea043;font-weight:bold;}");
     makeChip("∿", QColor("#bc8cff"), tr("Curves"), m_chipCurve,
         "QPushButton:checked{background:#1e1535;color:#bc8cff;border-color:#8957e5;font-weight:bold;}");
-    makeChip("▦", QColor("#388bfd"), tr("Maps"),   m_chipMap,
-        "QPushButton:checked{background:#0d1f3c;color:#79c0ff;border-color:#388bfd;font-weight:bold;}");
+    makeChip("▦", QColor("" + AppConfig::instance().colors.uiAccent.lighter(120).name() + ""), tr("Maps"),   m_chipMap,
+        "QPushButton:checked{background:#0d1f3c;color:#79c0ff;border-color:" + AppConfig::instance().colors.uiAccent.lighter(120).name() + ";font-weight:bold;}");
     row2->addWidget(m_chipValue, 1);
     row2->addWidget(m_chipCurve, 1);
     row2->addWidget(m_chipMap,   1);
@@ -1389,34 +1406,34 @@ void MainWindow::buildLeftPanel()
     m_projectTree->header()->setDefaultSectionSize(600);
     m_projectTree->setItemDelegate(new ProjectTreeDelegate(m_projectTree));
     m_projectTree->setStyleSheet(
-        "QTreeWidget { background:#0d1117; color:#c9d1d9; border:none; }"
+        "QTreeWidget { background:" + AppConfig::instance().colors.uiBg.name() + "; color:" + AppConfig::instance().colors.uiText.name() + "; border:none; }"
         "QTreeWidget::item { padding:3px 6px; min-height:24px; }"
         "QTreeWidget::item:selected { background:#1f3a6e; color:#ffffff; }"
-        "QTreeWidget::item:hover:!selected { background:#161b22; }"
-        "QTreeWidget::branch { background:#0d1117; }"
-        "QTreeWidget:focus { border:1px solid #58a6ff; }"
-        "QScrollBar:vertical { background:#0d1117; width:8px; border:none; }"
+        "QTreeWidget::item:hover:!selected { background:" + AppConfig::instance().colors.uiPanel.name() + "; }"
+        "QTreeWidget::branch { background:" + AppConfig::instance().colors.uiBg.name() + "; }"
+        "QTreeWidget:focus { border:1px solid " + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }"
+        "QScrollBar:vertical { background:" + AppConfig::instance().colors.uiBg.name() + "; width:8px; border:none; }"
         "QScrollBar::handle:vertical { background:#7d8590; border-radius:4px; min-height:24px; }"
-        "QScrollBar::groove:vertical { background:#0d1117; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background:#0d1117; }"
+        "QScrollBar::groove:vertical { background:" + AppConfig::instance().colors.uiBg.name() + "; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background:" + AppConfig::instance().colors.uiBg.name() + "; }"
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }"
-        "QScrollBar:horizontal { background:#0d1117; height:8px; border:none; }"
+        "QScrollBar:horizontal { background:" + AppConfig::instance().colors.uiBg.name() + "; height:8px; border:none; }"
         "QScrollBar::handle:horizontal { background:#7d8590; border-radius:4px; min-width:24px; }"
-        "QScrollBar::groove:horizontal { background:#0d1117; }"
-        "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background:#0d1117; }"
+        "QScrollBar::groove:horizontal { background:" + AppConfig::instance().colors.uiBg.name() + "; }"
+        "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background:" + AppConfig::instance().colors.uiBg.name() + "; }"
         "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width:0; }");
 
     // ── Recent Maps strip (above the tree) ────────────────────────────────
     m_recentMapsStrip = new QWidget();
     m_recentMapsStrip->setStyleSheet(
-        "background:#0d1117; border-bottom:1px solid #21262d;");
+        "background:" + AppConfig::instance().colors.uiBg.name() + "; border-bottom:1px solid " + AppConfig::instance().colors.buttonBg.name() + ";");
     auto *recentLay = new QVBoxLayout(m_recentMapsStrip);
     recentLay->setContentsMargins(8, 5, 8, 5);
     recentLay->setSpacing(3);
 
     m_recentMapsTitle = new QLabel(tr("Recent Maps"));
     m_recentMapsTitle->setStyleSheet(
-        "color:#8b949e; font-size:9pt; font-weight:600;"
+        "color:" + AppConfig::instance().colors.uiTextDim.name() + "; font-size:9pt; font-weight:600;"
         "letter-spacing:0.5px; background:transparent;");
     recentLay->addWidget(m_recentMapsTitle);
 
@@ -1995,12 +2012,21 @@ void MainWindow::buildActions()
     // (Qt::CTRL maps to ⌘ on macOS automatically). Added to the window
     // (and to the Misc menu via retranslateUi) so the shortcut works
     // even when no menu is open.
-    m_actCmdPalette = new QAction(tr("Command Palette…"), this);
+    m_actCmdPalette = new QAction(tr("Command Palette\u2026"), this);
     m_actCmdPalette->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_K));
     m_actCmdPalette->setShortcutContext(Qt::ApplicationShortcut);
     addAction(m_actCmdPalette);
     connect(m_actCmdPalette, &QAction::triggered,
             this, &MainWindow::actShowCommandPalette);
+
+    m_actPreferences = new QAction(tr("Settings\u2026"), this);
+    m_actPreferences->setMenuRole(QAction::NoRole);
+    connect(m_actPreferences, &QAction::triggered, this, [this]() {
+        ConfigDialog dlg(this);
+        dlg.exec();
+        for (auto *sub : m_mdi->subWindowList())
+            sub->widget()->update();
+    });
 
     m_actToggleAI = new QAction(tr("AI Assistant"), this);
     m_actToggleAI->setCheckable(true);
@@ -2344,14 +2370,15 @@ void MainWindow::buildMenuBar()
     m_menuMisc    = menuBar()->addMenu("");
     m_menuWindow  = menuBar()->addMenu("");
     m_menuHelp    = menuBar()->addMenu("&?");
-    // retranslateUi() will be called after constructor finishes language load
+    // Add Preferences immediately so it's always in the menu
+    if (m_actPreferences) m_menuMisc->addAction(m_actPreferences);
 }
 
 // ── retranslateUi — rebuilds all menus and updates all translatable strings ───
 
 void MainWindow::retranslateUi()
 {
-    if (!m_menuProject) return; // called before menus were created
+    if (!m_menuProject) return;
 
     // ── Stored action tooltips/texts ──────────────────────────────────
     m_actProjectMgr->setText(tr("Project Manager…"));
@@ -2377,7 +2404,8 @@ void MainWindow::retranslateUi()
     m_actAIFunctions->setText(tr("AI Functions…"));
     m_actVerifyChecksum->setText(tr("Verify Checksum"));
     m_actCorrectChecksum->setText(tr("Correct Checksum…"));
-    if (m_actCmdPalette) m_actCmdPalette->setText(tr("Command Palette…"));
+    if (m_actCmdPalette) m_actCmdPalette->setText(tr("Command Palette\u2026"));
+    if (m_actPreferences) m_actPreferences->setText(tr("Settings\u2026"));
     m_actTile->setText(tr("Tile Windows"));
     m_actCascade->setText(tr("Cascade Windows"));
     m_actCompare->setText(tr("Compare Projects…"));
@@ -2616,7 +2644,7 @@ void MainWindow::retranslateUi()
     m_menuFind->addAction(m_actPrevMarker);
 
     // ── Miscellaneous menu ────────────────────────────────────────────
-    m_menuMisc->clear();
+        m_menuMisc->clear();
     m_menuMisc->addAction(tr("Project &Info…"), this, &MainWindow::editProjectInfo);
     m_menuMisc->addSeparator();
     m_menuMisc->addAction(m_actAddVersion);
@@ -2640,6 +2668,11 @@ void MainWindow::retranslateUi()
     });
     m_menuMisc->addSeparator();
 #endif
+
+    // Preferences and Command Palette — placed BEFORE submenus
+    if (m_actCmdPalette) m_menuMisc->addAction(m_actCmdPalette);
+    if (m_actPreferences) m_menuMisc->addAction(m_actPreferences);
+    m_menuMisc->addSeparator();
 
     // ── Auto Save submenu (VSCode-style modes) ──────────────────────────
     {
@@ -2702,23 +2735,14 @@ void MainWindow::retranslateUi()
         });
     }
 
+
+
     // ── Window menu ───────────────────────────────────────────────────
     m_menuWindow->clear();
     m_menuWindow->addAction(m_actTile);
     m_menuWindow->addAction(m_actCascade);
     m_menuWindow->addSeparator();
     m_menuWindow->addAction(m_actCompare);
-
-    // ── Misc menu: preferences ────────────────────────────────────────
-    m_menuMisc->addSeparator();
-    if (m_actCmdPalette) m_menuMisc->addAction(m_actCmdPalette);
-    m_menuMisc->addAction(tr("&Preferences…"), this, [this]() {
-        ConfigDialog dlg(this);
-        dlg.exec();
-        // Repaint all open views after config change
-        for (auto *sub : m_mdi->subWindowList())
-            sub->widget()->update();
-    });
 
     // ── Help menu ─────────────────────────────────────────────────────
     m_menuHelp->clear();
@@ -2781,7 +2805,7 @@ void MainWindow::retranslateUi()
     // ── Translatable toolbar icons ────────────────────────────────────
     // These icon labels change with language (e.g. "V+" → "版本+" in Chinese)
     {
-        const QColor cFile("#c9d1d9"), cNav("#58a6ff"), cEnd("#d2a641");
+        const QColor cFile("" + AppConfig::instance().colors.uiText.name() + ""), cNav("" + AppConfig::instance().colors.uiAccent.lighter(140).name() + ""), cEnd("#d2a641");
         //: Toolbar icon label for "New Project" (keep very short, 2-3 chars)
         m_actNew->setIcon(makeIcon(tr("N+"), cFile));
         //: Toolbar icon label for "Add Version" (keep very short, 2-3 chars)
@@ -2833,8 +2857,8 @@ void MainWindow::retranslateUi()
 
 void MainWindow::buildToolBars()
 {
-    const QColor cFile ("#c9d1d9");  // file ops — neutral
-    const QColor cNav  ("#58a6ff");  // navigation — blue
+    const QColor cFile ("" + AppConfig::instance().colors.uiText.name() + "");  // file ops — neutral
+    const QColor cNav  ("" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "");  // navigation — blue
     const QColor cSize ("#e3b341");  // data size   — amber
     const QColor cEnd  ("#f0883e");  // endian      — orange
     const QColor cSign ("#3fb950");  // sign        — green
@@ -2970,18 +2994,18 @@ void MainWindow::buildToolBars()
     fontSpin->setFixedHeight(22);
     fontSpin->setToolTip(tr("Hex editor font size"));
     fontSpin->setStyleSheet(
-        "QSpinBox { background:#161b22; color:#c9d1d9;"
-        " border:1px solid #30363d; border-radius:3px; font-size:8pt; padding-left:3px; }"
-        "QSpinBox:hover { border-color:#58a6ff; }"
+        "QSpinBox { background:" + AppConfig::instance().colors.uiPanel.name() + "; color:" + AppConfig::instance().colors.uiText.name() + ";"
+        " border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; border-radius:3px; font-size:8pt; padding-left:3px; }"
+        "QSpinBox:hover { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; }"
         "QSpinBox::up-button, QSpinBox::down-button {"
         " width:14px; border:none; background:#1c2230; }"
-        "QSpinBox::up-button:hover, QSpinBox::down-button:hover { background:#1f6feb; }"
+        "QSpinBox::up-button:hover, QSpinBox::down-button:hover { background:" + AppConfig::instance().colors.uiAccent.name() + "; }"
         "QSpinBox::up-arrow   { image:none; width:0; height:0;"
         " border-left:4px solid transparent; border-right:4px solid transparent;"
-        " border-bottom:5px solid #c9d1d9; }"
+        " border-bottom:5px solid " + AppConfig::instance().colors.uiText.name() + "; }"
         "QSpinBox::down-arrow { image:none; width:0; height:0;"
         " border-left:4px solid transparent; border-right:4px solid transparent;"
-        " border-top:5px solid #c9d1d9; }");
+        " border-top:5px solid " + AppConfig::instance().colors.uiText.name() + "; }");
     tb2->addWidget(fontSpin);
 
     // Keep m_fontSizeLabel as a thin alias (zoom menu still uses it)
@@ -3762,7 +3786,7 @@ void MainWindow::loadA2LIntoProject(Project *project, const QString &a2lPath)
             stats += tr("<tr><td style='padding:2px 12px; color:#ff7b72;'>Out of bounds:</td><td><b>%1</b> (%2%)</td></tr>").arg(outOfBounds).arg(failPct);
             stats += "</table>";
             if (valid > 0) {
-                stats += "<table style='margin:4px auto; font-size:9pt; color:#8b949e;'>";
+                stats += "<table style='margin:4px auto; font-size:9pt; color:" + AppConfig::instance().colors.uiTextDim.name() + ";'>";
                 stats += tr("<tr><td style='padding:1px 8px;'>MAPs:</td><td>%1</td>"
                            "<td style='padding:1px 8px;'>CURVEs:</td><td>%2</td>"
                            "<td style='padding:1px 8px;'>VALUEs:</td><td>%3</td></tr>")
@@ -3781,12 +3805,12 @@ void MainWindow::loadA2LIntoProject(Project *project, const QString &a2lPath)
                     tr("<div style='background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); "
                        "border-radius:8px; padding:12px; margin:4px 0;'>"
                        "<b style='font-size:11pt;'>%1 %2: %3%</b><br>"
-                       "<pre style='color:#8b949e; font-size:8pt; margin-top:6px;'>%4</pre>"
+                       "<pre style='color:%5; font-size:8pt; margin-top:6px;'>%4</pre>"
                        "</div>")
                     .arg(scoreEmoji)
                     .arg(tr("Compatibility"))
                     .arg(QString("<span style='color:%1'>%2</span>").arg(scoreColor).arg(matchScore))
-                    .arg(scoreDetails.trimmed().toHtmlEscaped().replace("\n", "<br>")));
+                    .arg(scoreDetails.trimmed().toHtmlEscaped().replace("\n", "<br>")).arg(AppConfig::instance().colors.uiTextDim.name()));
                 scoreWidget->setWordWrap(true);
                 rLay->addWidget(scoreWidget);
             }
@@ -4139,7 +4163,7 @@ protected:
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
         // Base fill
-        p.fillRect(rect(), QColor(Theme::bgRoot));
+        p.fillRect(rect(), QColor(Theme::bgRoot()));
         // Radial glow just below the top bar
         QRadialGradient g(QPointF(width() / 2.0, 120.0), 620.0);
         g.setColorAt(0.0, QColor(31, 111, 235, 38));   // ~15% alpha
@@ -4206,7 +4230,7 @@ void MainWindow::buildWelcomePage()
     m_welcomePage = new WelcomeBackdrop();
     m_welcomePage->setAutoFillBackground(false);
     m_welcomePage->setStyleSheet(
-        QString("WelcomeBackdrop { background:%1; }").arg(Theme::bgRoot));
+        QString("WelcomeBackdrop { background:%1; }").arg(Theme::bgRoot()));
 
     auto *root = new QVBoxLayout(m_welcomePage);
     root->setContentsMargins(0, 0, 0, 0);
@@ -4218,9 +4242,9 @@ void MainWindow::buildWelcomePage()
     topBar->setStyleSheet(QString(
         "QFrame {"
         "  background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-        "    stop:0 #161b22, stop:1 #0d1117);"
+        "    stop:0 " + AppConfig::instance().colors.uiPanel.name() + ", stop:1 " + AppConfig::instance().colors.uiBg.name() + ");"
         "  border:none; border-bottom:1px solid %1;"
-        "}").arg(Theme::borderSubtle));
+        "}").arg(Theme::borderSubtle()));
     auto *topLay = new QHBoxLayout(topBar);
     topLay->setContentsMargins(Theme::spaceM, 0, Theme::spaceS, 0);
     topLay->setSpacing(Theme::spaceS);
@@ -4233,7 +4257,7 @@ void MainWindow::buildWelcomePage()
         "QLabel { background:%1; color:white;"
         "         border:1px solid rgba(88,166,255,0.6); border-radius:6px;"
         "         font-size:11pt; font-weight:bold; }")
-        .arg(Theme::primary));
+        .arg(Theme::primary()));
     {
         auto *glow = new QGraphicsDropShadowEffect(hexTile);
         glow->setBlurRadius(16);
@@ -4253,7 +4277,7 @@ void MainWindow::buildWelcomePage()
         wordmark->setFont(f);
     }
     wordmark->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::textBright));
+        QString("color:%1; background:transparent;").arg(Theme::textBright()));
     topLay->addWidget(wordmark);
 
     // Version pill (neutral)
@@ -4362,7 +4386,7 @@ void MainWindow::buildWelcomePage()
             "  border:1px solid rgba(31,111,235,0.5);"
             "}"
             "QPushButton:pressed { background:rgba(31,111,235,0.30); }")
-            .arg(Theme::textBright, Theme::accent));
+            .arg(Theme::textBright(), Theme::accent()));
         connect(b, &QPushButton::clicked, this, std::move(action));
         return b;
     };
@@ -4412,7 +4436,7 @@ void MainWindow::buildWelcomePage()
         div->setFixedHeight(1);
         div->setMaximumWidth(640);
         div->setStyleSheet(QString("background:%1; border:none;")
-                           .arg(Theme::borderSubtle));
+                           .arg(Theme::borderSubtle()));
         auto *divWrap = new QHBoxLayout();
         divWrap->setContentsMargins(0, 0, 0, 0);
         divWrap->addStretch(1);
@@ -4434,7 +4458,7 @@ void MainWindow::buildWelcomePage()
         hexLogo->setFont(f);
     }
     hexLogo->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::accent));
+        QString("color:%1; background:transparent;").arg(Theme::accent()));
     {
         // Soft brand-blue glow around the hero hex
         auto *glow = new QGraphicsDropShadowEffect(hexLogo);
@@ -4457,7 +4481,7 @@ void MainWindow::buildWelcomePage()
         titleLbl->setFont(f);
     }
     titleLbl->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::textBright));
+        QString("color:%1; background:transparent;").arg(Theme::textBright()));
     hostLay->addWidget(titleLbl);
 
     hostLay->addSpacing(4);
@@ -4471,7 +4495,7 @@ void MainWindow::buildWelcomePage()
         subtitleLbl->setFont(f);
     }
     subtitleLbl->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::textMuted));
+        QString("color:%1; background:transparent;").arg(Theme::textMuted()));
     hostLay->addWidget(subtitleLbl);
 
     hostLay->addSpacing(28);
@@ -4495,9 +4519,9 @@ void MainWindow::buildWelcomePage()
         "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
         "    stop:0 rgba(88,166,255,0.08), stop:1 rgba(31,111,235,0.16));"
         "}")
-        .arg(Theme::accent)
+        .arg(Theme::accent())
         .arg(Theme::radiusCard)
-        .arg(Theme::accentDim));
+        .arg(Theme::accentDim()));
 
     auto *dzLay = new QVBoxLayout(dropZone);
     dzLay->setContentsMargins(Theme::spaceL, Theme::spaceL,
@@ -4514,7 +4538,7 @@ void MainWindow::buildWelcomePage()
         dzIcon->setFont(f);
     }
     dzIcon->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::accent));
+        QString("color:%1; background:transparent;").arg(Theme::accent()));
     dzLay->addWidget(dzIcon);
 
     dzLay->addSpacing(8);
@@ -4529,7 +4553,7 @@ void MainWindow::buildWelcomePage()
         dzTitle->setFont(f);
     }
     dzTitle->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::textBright));
+        QString("color:%1; background:transparent;").arg(Theme::textBright()));
     dzLay->addWidget(dzTitle);
 
     auto *dzSub = new QLabel(tr("or click to browse"));
@@ -4542,7 +4566,7 @@ void MainWindow::buildWelcomePage()
         dzSub->setFont(f);
     }
     dzSub->setStyleSheet(
-        QString("color:%1; background:transparent;").arg(Theme::textMuted));
+        QString("color:%1; background:transparent;").arg(Theme::textMuted()));
     dzLay->addWidget(dzSub);
 
     dzLay->addSpacing(8);
@@ -4558,7 +4582,7 @@ void MainWindow::buildWelcomePage()
     }
     dzFmt->setStyleSheet(
         QString("color:%1; background:transparent; border:none;")
-            .arg(Theme::textDim));
+            .arg(Theme::textDim()));
     dzLay->addWidget(dzFmt);
 
     dropZone->installEventFilter(new WelcomeClickRelay(dropZone, [this]() {
@@ -4629,7 +4653,7 @@ void MainWindow::buildWelcomePage()
             "}"
             "QFrame#qaTile:hover {"
             "  background:#1c2128; border:1px solid %3;"
-            "}").arg(Theme::bgCard, Theme::borderSubtle, Theme::accent));
+            "}").arg(Theme::bgCard(), Theme::borderSubtle(), Theme::accent()));
 
         // Subtle resting shadow that intensifies on hover via Qt's hover state
         // changes (the effect itself is constant — re-paint changes are driven
@@ -4659,7 +4683,7 @@ void MainWindow::buildWelcomePage()
             icon->setFont(f);
         }
         icon->setStyleSheet(QString("color:%1; background:transparent;")
-                            .arg(Theme::accent));
+                            .arg(Theme::accent()));
         {
             // Tiny coloured glow under the icon — soft, not garish
             auto *glow = new QGraphicsDropShadowEffect(icon);
@@ -4680,7 +4704,7 @@ void MainWindow::buildWelcomePage()
             lbl->setFont(f);
         }
         lbl->setStyleSheet(QString("color:%1; background:transparent;")
-                           .arg(Theme::textBright));
+                           .arg(Theme::textBright()));
         vl->addWidget(lbl, 0, Qt::AlignHCenter);
 
         auto fn = t.action;
@@ -4784,7 +4808,7 @@ void MainWindow::buildWelcomePage()
             recentTitle->setFont(f);
         }
         recentTitle->setStyleSheet(
-            QString("color:%1; background:transparent;").arg(Theme::textBright));
+            QString("color:%1; background:transparent;").arg(Theme::textBright()));
         hdrLay->addWidget(recentTitle);
 
         hdrLay->addStretch(1);
@@ -4800,7 +4824,7 @@ void MainWindow::buildWelcomePage()
         viewAll->setStyleSheet(QString(
             "QLabel { color:%1; background:transparent; }"
             "QLabel:hover { color:%2; }")
-            .arg(Theme::accent, Theme::accentDim));
+            .arg(Theme::accent(), Theme::accentDim()));
         viewAll->installEventFilter(
             new WelcomeClickRelay(viewAll, [this]() { actProjectManager(); }));
         hdrLay->addWidget(viewAll);
@@ -4858,7 +4882,7 @@ void MainWindow::buildWelcomePage()
                 "}"
                 "QFrame#recentCard:hover {"
                 "  background:#1c2128; border:1px solid %3;"
-                "}").arg(Theme::bgCard, Theme::borderSubtle, Theme::accent));
+                "}").arg(Theme::bgCard(), Theme::borderSubtle(), Theme::accent()));
 
             // Hover-lift drop shadow (3px feel via dy=5 + larger blur)
             {
@@ -4900,7 +4924,7 @@ void MainWindow::buildWelcomePage()
             // logo arrives via async fetch, the chip gets replaced.
             logo->setStyleSheet(QString(
                 "QLabel { background:%1; color:%2; border:none; border-radius:8px; }")
-                .arg(Theme::bgRoot, Theme::accent));
+                .arg(Theme::bgRoot(), Theme::accent()));
             topRow->addWidget(logo, 0, Qt::AlignTop);
 
             // Async fetch real brand logo. Use a QPointer so the callback is
@@ -4945,7 +4969,7 @@ void MainWindow::buildWelcomePage()
                 nameLbl->setFont(f);
             }
             nameLbl->setStyleSheet(QString("color:%1; background:transparent;")
-                                   .arg(Theme::textBright));
+                                   .arg(Theme::textBright()));
             const int textW = 240 - 14 * 2 - 40 - 12;
             nameLbl->setText(QFontMetrics(nameLbl->font()).elidedText(
                                  name, Qt::ElideRight, textW));
@@ -4968,7 +4992,7 @@ void MainWindow::buildWelcomePage()
                 subLbl->setFont(f);
             }
             subLbl->setStyleSheet(QString("color:%1; background:transparent;")
-                                  .arg(Theme::textMuted));
+                                  .arg(Theme::textMuted()));
             subLbl->setText(QFontMetrics(subLbl->font()).elidedText(
                                 sub, Qt::ElideRight, textW));
             txt->addWidget(subLbl);
@@ -4989,7 +5013,7 @@ void MainWindow::buildWelcomePage()
                 timeLbl->setFont(f);
             }
             timeLbl->setStyleSheet(QString("color:%1; background:transparent;")
-                                   .arg(Theme::textDim));
+                                   .arg(Theme::textDim()));
             cl->addWidget(timeLbl);
 
             const QString path = e.path;
@@ -5053,7 +5077,7 @@ void MainWindow::buildWelcomePage()
             empty->setFont(f);
         }
         empty->setStyleSheet(QString("color:%1; background:transparent;")
-                             .arg(Theme::textMuted));
+                             .arg(Theme::textMuted()));
         hostLay->addWidget(empty);
     }
 
@@ -5077,7 +5101,7 @@ void MainWindow::buildWelcomePage()
             mapsTitle->setFont(f);
         }
         mapsTitle->setStyleSheet(QString("color:%1; background:transparent;")
-                                 .arg(Theme::textBright));
+                                 .arg(Theme::textBright()));
         mhLay->addWidget(mapsTitle);
         mhLay->addStretch(1);
 
@@ -5121,7 +5145,7 @@ void MainWindow::buildWelcomePage()
                 "}"
                 "QFrame:hover {"
                 "  background:#1c2128; border:1px solid %3;"
-                "}").arg(Theme::bgCard, Theme::borderSubtle, Theme::accent));
+                "}").arg(Theme::bgCard(), Theme::borderSubtle(), Theme::accent()));
             {
                 auto *fx = new QGraphicsDropShadowEffect(chip);
                 fx->setBlurRadius(10);
@@ -5145,7 +5169,7 @@ void MainWindow::buildWelcomePage()
                 gl->setFont(f);
             }
             gl->setStyleSheet(QString("color:%1; background:transparent;")
-                              .arg(Theme::accent));
+                              .arg(Theme::accent()));
             cl->addWidget(gl);
 
             auto *tl = new QLabel(shown);
@@ -5157,7 +5181,7 @@ void MainWindow::buildWelcomePage()
                 tl->setFont(f);
             }
             tl->setStyleSheet(QString("color:%1; background:transparent;")
-                              .arg(Theme::textBright));
+                              .arg(Theme::textBright()));
             cl->addWidget(tl);
 
             chip->installEventFilter(new WelcomeClickRelay(chip,
@@ -5208,7 +5232,7 @@ void MainWindow::buildWelcomePage()
         footer->setFont(f);
     }
     footer->setStyleSheet(QString("color:%1; background:transparent;")
-                          .arg(Theme::textDim));
+                          .arg(Theme::textDim()));
     hostLay->addWidget(footer);
     hostLay->addSpacing(12);
 
@@ -5299,7 +5323,7 @@ void MainWindow::refreshProjectTreeNow()
     QFont monoFont("Consolas", qMax(7, leafSize - 1));
     monoFont.setStyleHint(QFont::Monospace);
 
-    static const QIcon iconMap   = makeIcon("\u25A6", QColor("#388bfd"), 9);
+    static const QIcon iconMap   = makeIcon("\u25A6", QColor("" + AppConfig::instance().colors.uiAccent.lighter(120).name() + ""), 9);
     static const QIcon iconCurve = makeIcon("\u223F", QColor("#bc8cff"), 10);
     static const QIcon iconValue = makeIcon("\u25CF", QColor("#3fb950"), 9);
     static const QIcon iconBlk   = makeIcon("\u25AA", QColor("#6e7681"), 9);
@@ -5349,7 +5373,7 @@ void MainWindow::refreshProjectTreeNow()
             else if (!m.userNotes.isEmpty())
                 mi->setForeground(0, QColor("#d29a22"));
             else if (!tx)
-                mi->setForeground(0, QColor("#8b949e"));
+                mi->setForeground(0, QColor("" + AppConfig::instance().colors.uiTextDim.name() + ""));
             if (!isLargeProject) {
                 QString tip = m.name;
                 if (tx)  tip += "\n" + tx->translation;
@@ -5368,7 +5392,7 @@ void MainWindow::refreshProjectTreeNow()
         auto *myMaps = new QTreeWidgetItem(under);
         myMaps->setText(0, tr("My maps  (%1)").arg(p->maps.size()));
         myMaps->setFont(0, boldFont);
-        myMaps->setForeground(0, QColor("#e6edf3"));
+        myMaps->setForeground(0, QColor("" + AppConfig::instance().colors.uiText.name() + ""));
         myMaps->setExpanded(!isLargeProject);
         myMaps->setFlags(myMaps->flags() & ~Qt::ItemIsSelectable);
 
@@ -5472,7 +5496,7 @@ void MainWindow::refreshProjectTreeNow()
                           QVariant::fromValue(static_cast<void *>(project)));
         projItem->setFont(0, boldFont);
         projItem->setForeground(0, project->isLinkedReference
-                                    ? QColor("#3fb950") : QColor("#58a6ff"));
+                                    ? QColor("#3fb950") : QColor("" + AppConfig::instance().colors.uiAccent.lighter(140).name() + ""));
         projItem->setExpanded(true);
 
         // ECU info row
@@ -5483,7 +5507,7 @@ void MainWindow::refreshProjectTreeNow()
             ecuItem->setText(0, ecuText);
             QFont ef("Segoe UI", qMax(7, headerSize - 2)); ef.setItalic(true);
             ecuItem->setFont(0, ef);
-            ecuItem->setForeground(0, QColor("#8b949e"));
+            ecuItem->setForeground(0, QColor("" + AppConfig::instance().colors.uiTextDim.name() + ""));
             ecuItem->setFlags(ecuItem->flags() & ~Qt::ItemIsSelectable);
         }
 
@@ -5492,7 +5516,7 @@ void MainWindow::refreshProjectTreeNow()
             auto *hexItem = new QTreeWidgetItem(projItem);
             hexItem->setText(0, tr("Hexdump  ") + fmtSize(project->currentData.size()));
             hexItem->setFont(0, QFont("Segoe UI", qMax(7, headerSize - 2)));
-            hexItem->setForeground(0, QColor("#8b949e"));
+            hexItem->setForeground(0, QColor("" + AppConfig::instance().colors.uiTextDim.name() + ""));
             hexItem->setIcon(0, makeIcon("Hex", QColor("#6e7681"), 5));
             hexItem->setData(0, Qt::UserRole,
                              QVariant::fromValue(static_cast<void *>(project)));
@@ -5504,7 +5528,7 @@ void MainWindow::refreshProjectTreeNow()
             auto *linksItem = new QTreeWidgetItem(projItem);
             linksItem->setText(0, tr("Linked ROMs  (%1)").arg(project->linkedRoms.size()));
             linksItem->setFont(0, boldFont);
-            linksItem->setForeground(0, QColor("#e6edf3"));
+            linksItem->setForeground(0, QColor("" + AppConfig::instance().colors.uiText.name() + ""));
             linksItem->setExpanded(expandedGroups.contains("__linkedroms__"));
             linksItem->setFlags(linksItem->flags() & ~Qt::ItemIsSelectable);
             for (const auto &lr : project->linkedRoms) {
@@ -5516,7 +5540,7 @@ void MainWindow::refreshProjectTreeNow()
                 lrItem->setFont(0, leafFont);
                 lrItem->setForeground(0, lr.isReference
                     ? QColor("#3fb950")   // green for ORI
-                    : QColor("#c9d1d9"));
+                    : QColor("" + AppConfig::instance().colors.uiText.name() + ""));
                 lrItem->setIcon(0, lr.isReference
                     ? makeIcon("◉", QColor("#3fb950"), 9)
                     : makeIcon("◎", QColor("#6e7681"), 9));
@@ -5529,7 +5553,7 @@ void MainWindow::refreshProjectTreeNow()
             auto *versItem = new QTreeWidgetItem(projItem);
             versItem->setText(0, tr("Versions  (%1)").arg(project->versions.size()));
             versItem->setFont(0, boldFont);
-            versItem->setForeground(0, QColor("#e6edf3"));
+            versItem->setForeground(0, QColor("" + AppConfig::instance().colors.uiText.name() + ""));
             versItem->setExpanded(expandedGroups.contains("__versions__"));
             versItem->setFlags(versItem->flags() & ~Qt::ItemIsSelectable);
             for (int vi = 0; vi < project->versions.size(); ++vi) {
@@ -5538,7 +5562,7 @@ void MainWindow::refreshProjectTreeNow()
                 vItem->setText(0, v.name + "  "
                     + v.created.toString("dd/MM/yy HH:mm"));
                 vItem->setFont(0, leafFont);
-                vItem->setForeground(0, QColor("#8b949e"));
+                vItem->setForeground(0, QColor("" + AppConfig::instance().colors.uiTextDim.name() + ""));
                 vItem->setIcon(0, makeIcon("\u25F7", QColor("#6e7681"), 9));
                 // Clickable: Qt::UserRole carries the Project*, UserRole+4
                 // flags this as a ProjectVersion snapshot with its index
@@ -6777,13 +6801,13 @@ void MainWindow::refreshRecentMapsStrip()
         return;
     }
 
-    const QString chipSS = QStringLiteral(
-        "QPushButton { background:#1c2330; color:#c9d1d9;"
-        " border:1px solid #30363d; border-radius:11px;"
+    const QString chipSS = QString(
+        "QPushButton { background:#1c2330; color:" + AppConfig::instance().colors.uiText.name() + ";"
+        " border:1px solid " + AppConfig::instance().colors.uiBorder.name() + "; border-radius:11px;"
         " font-size:8pt; padding:0 8px; }"
-        "QPushButton:hover { border-color:#58a6ff; color:#ffffff;"
+        "QPushButton:hover { border-color:" + AppConfig::instance().colors.uiAccent.lighter(140).name() + "; color:#ffffff;"
         " background:#1f2a3d; }"
-        "QPushButton:pressed { background:#1f6feb; color:#ffffff; }");
+        "QPushButton:pressed { background:" + AppConfig::instance().colors.uiAccent.name() + "; color:#ffffff; }");
 
     const int kMax = 5;
     int count = 0;
@@ -7501,10 +7525,33 @@ void MainWindow::applyUiTheme()
 {
     const AppColors &c = AppConfig::instance().colors;
 
+    // Load the QSS template and substitute color placeholders
+    QFile qssFile(":/style.qss");
+    QString qss;
+    if (qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qss = QString::fromUtf8(qssFile.readAll());
+        qss.replace("${uiBg}",          c.uiBg.name());
+        qss.replace("${uiPanel}",       c.uiPanel.name());
+        qss.replace("${buttonBg}",      c.buttonBg.name());
+        qss.replace("${uiBorder}",      c.uiBorder.name());
+        qss.replace("${uiAccent}",      c.uiAccent.name());
+        qss.replace("${uiAccentHover}", c.uiAccent.lighter(120).name());
+        qss.replace("${uiAccentLight}", c.uiAccent.lighter(140).name());
+        qss.replace("${uiTextDim}",     c.uiTextDim.name());
+        qss.replace("${uiText}",        c.uiText.name());
+    }
+    qApp->setStyleSheet(qss);
+
     // MDI area background
     m_mdi->setBackground(QBrush(c.uiBg));
 
     // Left panel & tree
+    auto hex = [](const QColor &col) { return col.name(); };
+    auto rgba = [](const QColor &col) {
+        return QString("rgba(%1,%2,%3,%4)")
+            .arg(col.red()).arg(col.green()).arg(col.blue())
+            .arg(QString::number(col.alphaF(), 'f', 2));
+    };
     m_projectTree->setStyleSheet(QString(
         "QTreeWidget { font-size:7pt; background:%1; color:%2;"
         "  border:none; alternate-background-color:%3; }"
@@ -7513,13 +7560,44 @@ void MainWindow::applyUiTheme()
         "QTreeWidget::branch { background:%1; }"
         "QHeaderView::section { background:%5; color:%6; font-size:7pt;"
         "  border:none; border-bottom:1px solid %7; padding:2px 4px; }")
-        .arg(c.uiBg.name())
-        .arg(c.uiText.name())
-        .arg(c.uiPanel.name())
-        .arg(c.uiAccent.name())
-        .arg(c.uiPanel.name())
-        .arg(c.uiTextDim.name())
-        .arg(c.uiBorder.name()));
+        .arg(hex(c.treeBg))
+        .arg(hex(c.uiText))
+        .arg(hex(c.uiPanel))
+        .arg(rgba(c.treeSelected))
+        .arg(hex(c.uiPanel))
+        .arg(hex(c.uiTextDim))
+        .arg(hex(c.uiBorder)));
+
+    // Update bar
+    if (m_updateBar) {
+        m_updateBar->setStyleSheet(QString(
+            "QFrame{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "stop:0 rgba(%1,0.15), stop:0.5 rgba(%1,0.08), stop:1 rgba(%1,0.15));"
+            "border-bottom:1px solid rgba(%1,0.4);padding:0}")
+            .arg(QString("%1,%2,%3").arg(c.uiAccent.red()).arg(c.uiAccent.green()).arg(c.uiAccent.blue())));
+        if (m_updateLabel)
+            m_updateLabel->setStyleSheet("color:" + c.uiText.name() + ";font-size:9pt;font-weight:500");
+    }
+
+    // Force full repaint on all open views — schedule a deferred
+    // repaint so the stylesheet changes have fully propagated.
+    QTimer::singleShot(0, this, [this]() {
+        for (auto *sub : m_mdi->subWindowList()) {
+            if (!sub->widget()) continue;
+            sub->widget()->setStyleSheet(sub->widget()->styleSheet());
+            sub->widget()->update();
+            // Recurse into child widgets (waveform, hex, overlay)
+            for (auto *child : sub->widget()->findChildren<QWidget*>())
+                child->update();
+        }
+        // Also repaint the welcome page if visible
+        if (m_welcomePage) {
+            m_welcomePage->setStyleSheet(m_welcomePage->styleSheet());
+            m_welcomePage->update();
+            for (auto *child : m_welcomePage->findChildren<QWidget*>())
+                child->update();
+        }
+    });
 }
 
 // ── Auto-detect ECU (73-detector chain port) ─────────────────────────────────
@@ -7806,7 +7884,7 @@ void MainWindow::actLinkRom()
         auto *tip = new QLabel(tr("  \u21d4  Cursors are now synchronized.\n"
                                   "       Click this button to unlink them."), this);
         tip->setStyleSheet(
-            "QLabel { background:#1f3a6e; color:#e6edf3; border:1px solid #58a6ff;"
+            "QLabel { background:#1f3a6e; color:" + AppConfig::instance().colors.uiText.name() + "; border:1px solid " + AppConfig::instance().colors.uiAccent.lighter(140).name() + ";"
             "  border-radius:6px; padding:8px 14px; font-size:9pt; }");
         tip->setWindowFlags(Qt::ToolTip);
         tip->setAttribute(Qt::WA_DeleteOnClose);

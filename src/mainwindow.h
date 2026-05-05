@@ -423,6 +423,7 @@ private:
 
     // ── Command palette (Cmd/Ctrl+K) ───────────────────────────────────
     QAction        *m_actCmdPalette = nullptr;
+    QAction        *m_actPreferences = nullptr;
     CommandPalette *m_cmdPalette    = nullptr;  // lazily constructed
 
     // ── Map operation actions ──────────────────────────────────────────

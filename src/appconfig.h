@@ -50,7 +50,28 @@ struct AppColors {
     QColor uiText;      // primary text
     QColor uiTextDim;   // secondary / dimmed labels
     QColor uiAccent;    // highlight color (links, selection, active)
+
+    // ── Structural UI (bars, toolbars, tree) ────────────────────────────────
+    QColor topBarBg;     // top welcome bar / hero area
+    QColor toolbarBg;    // format/project toolbar strip
+    QColor statusBarBg;  // bottom status bar
+    QColor treeBg;       // project tree / left panel background
+    QColor treeSelected; // selected item in project tree
+    QColor buttonBg;     // default button background
+    QColor buttonText;   // default button text
+    QColor inputBg;      // text input / search field background
+    QColor inputBorder;  // text input border
 };
+
+struct ColorTheme {
+    const char *id;
+    const char *nameKey;
+    AppColors colors;
+};
+
+namespace ColorThemes {
+    const QVector<ColorTheme> &all();
+}
 
 class AppConfig : public QObject {
     Q_OBJECT
@@ -79,7 +100,9 @@ signals:
     void displaySettingsChanged();
     void aiPermissionModeChanged(PermissionMode mode);
 
+public:
+    static void applyDefaults(AppColors &c);
+
 private:
     AppConfig();
-    static void applyDefaults(AppColors &c);
 };

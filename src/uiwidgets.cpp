@@ -36,10 +36,10 @@ QString primaryButtonQss()
         "QPushButton#primary:disabled {"
         "  background: %6; color: %7; border-color: %8;"
         "}")
-        .arg(primary, textOnPrimary)
+        .arg(primary(), textOnPrimary)
         .arg(radiusButton)
-        .arg(primaryHover, primaryPressed,
-             bgHover, textDim, border);
+        .arg(primaryHover(), primaryPressed(),
+             bgHover(), textDim(), border());
 }
 
 QString destructiveButtonQss()
@@ -70,9 +70,9 @@ QString flatButtonQss()
         "}"
         "QPushButton#flat:hover  { border-color: %4; color: %4; }"
         "QPushButton#flat:pressed{ background: rgba(31,111,235,0.18); color: %4; }")
-        .arg(textPrimary, border)
+        .arg(textPrimary(), border())
         .arg(radiusButton)
-        .arg(accent);
+        .arg(accent());
 }
 
 QString cardFrameQss()
@@ -82,7 +82,7 @@ QString cardFrameQss()
         "  background: %1; color: %2;"
         "  border: 1px solid %3; border-radius: %4px;"
         "}")
-        .arg(bgCard, textPrimary, border)
+        .arg(bgCard(), textPrimary(), border())
         .arg(radiusCard);
 }
 
@@ -98,16 +98,16 @@ QString sunkenInputQss()
         "QTextEdit[role=\"sunken\"]:focus {"
         "  border-color: %4; background: %5;"
         "}")
-        .arg(bgSunken, border)
+        .arg(bgSunken(), border())
         .arg(radiusInput)
-        .arg(primary, bgCard);
+        .arg(primary(), bgCard());
 }
 
 QString pillQss(const QString &kind)
 {
-    QString fg = textMuted;
+    QString fg = textMuted();
     QString bg = "rgba(139, 148, 158, 0.12)";
-    QString br = border;
+    QString br = border();
     if (kind == QLatin1String("success")) {
         fg = success;
         bg = "rgba(63, 185, 80, 0.14)";
@@ -179,7 +179,7 @@ QFrame *makeHeaderStrip(const QString &iconGlyph,
     strip->setObjectName("headerStrip");
     strip->setStyleSheet(QStringLiteral(
         "QFrame#headerStrip { background: %1; border-bottom: 1px solid %2; }")
-        .arg(Theme::bgRoot, Theme::borderSubtle));
+        .arg(Theme::bgRoot(), Theme::borderSubtle()));
     strip->setFixedHeight(68);
 
     auto *lay = new QHBoxLayout(strip);
@@ -199,7 +199,7 @@ QFrame *makeHeaderStrip(const QString &iconGlyph,
             "  color: %1;"
             "  font-size: 18pt;"
             "  font-weight: bold;"
-            "}").arg(Theme::accent));
+            "}").arg(Theme::accent()));
         lay->addWidget(tile, 0, Qt::AlignVCenter);
     }
 
@@ -209,11 +209,11 @@ QFrame *makeHeaderStrip(const QString &iconGlyph,
     auto *titleLbl = new QLabel(title, strip);
     titleLbl->setStyleSheet(QStringLiteral(
         "color: %1; font-size: %2pt; font-weight: 800; letter-spacing: 1px; background: transparent;")
-        .arg(Theme::textPrimary).arg(15));
+        .arg(Theme::textPrimary()).arg(15));
     auto *subLbl = new QLabel(subtitle, strip);
     subLbl->setStyleSheet(QStringLiteral(
         "color: %1; font-size: %2pt; letter-spacing: 0.4px; background: transparent;")
-        .arg(Theme::textMuted).arg(Theme::captionPt));
+        .arg(Theme::textMuted()).arg(Theme::captionPt));
     col->addWidget(titleLbl);
     col->addWidget(subLbl);
     lay->addLayout(col, 1);
@@ -264,7 +264,7 @@ QLabel *makeSectionHeader(const QString &text, QWidget *parent)
     l->setStyleSheet(QStringLiteral(
         "color: %1; font-size: %2pt; font-weight: bold;"
         " letter-spacing: 2px; background: transparent;")
-        .arg(Theme::textMuted).arg(Theme::captionPt));
+        .arg(Theme::textMuted()).arg(Theme::captionPt));
     return l;
 }
 
@@ -292,7 +292,7 @@ QWidget *makeFormField(const QString &label,
     QString labelHtml = QStringLiteral(
         "<span style='color:%1; font-size:%2pt; font-weight:bold;"
         " letter-spacing:0.5px; text-transform:uppercase;'>%3</span>")
-        .arg(Theme::textMuted).arg(Theme::captionPt)
+        .arg(Theme::textMuted()).arg(Theme::captionPt)
         .arg(label.toHtmlEscaped());
     if (required) {
         labelHtml += QStringLiteral(
@@ -316,7 +316,7 @@ QWidget *makeFormField(const QString &label,
         auto *helpLbl = new QLabel(helper, w);
         helpLbl->setStyleSheet(QStringLiteral(
             "color: %1; font-size: %2pt; background: transparent;")
-            .arg(Theme::textMuted).arg(Theme::captionPt));
+            .arg(Theme::textMuted()).arg(Theme::captionPt));
         helpLbl->setWordWrap(true);
         lay->addWidget(helpLbl);
     }
@@ -351,7 +351,7 @@ RiskyChangeConfirmDialog::RiskyChangeConfirmDialog(QWidget *parent)
         "QDialog { background: %1; color: %2; }"
         "QLabel  { color: %2; background: transparent; }"
         "%3 %4 %5 %6 %7 %8 %9 %10 %11")
-        .arg(Theme::bgRoot, Theme::textPrimary,
+        .arg(Theme::bgRoot(), Theme::textPrimary(),
              Theme::primaryButtonQss(),
              Theme::destructiveButtonQss(),
              Theme::flatButtonQss(),
@@ -387,7 +387,7 @@ RiskyChangeConfirmDialog::RiskyChangeConfirmDialog(QWidget *parent)
     m_headlineLabel->setFont(titleFont);
     m_headlineLabel->setWordWrap(true);
     m_headlineLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                   .arg(Theme::textBright));
+                                   .arg(Theme::textBright()));
     stripLay->addWidget(m_headlineLabel, 1);
 
     m_riskPill = makePill(QStringLiteral("CAUTION"), QStringLiteral("warning"),
@@ -403,7 +403,7 @@ RiskyChangeConfirmDialog::RiskyChangeConfirmDialog(QWidget *parent)
     m_descLabel = new QLabel(m_descCard);
     m_descLabel->setWordWrap(true);
     m_descLabel->setStyleSheet(QStringLiteral(
-        "color: %1; background: transparent;").arg(Theme::textPrimary));
+        "color: %1; background: transparent;").arg(Theme::textPrimary()));
     descLay->addWidget(m_descLabel);
     m_root->addWidget(m_descCard);
 
@@ -436,9 +436,9 @@ RiskyChangeConfirmDialog::RiskyChangeConfirmDialog(QWidget *parent)
         "QHeaderView::section { background: %5; color: %6; border: none;"
         "  border-bottom: 1px solid %3; padding: 6px 8px; font-weight: bold;"
         "  font-size: %7pt; }")
-        .arg(Theme::bgSunken, Theme::textPrimary, Theme::border)
+        .arg(Theme::bgSunken(), Theme::textPrimary(), Theme::border())
         .arg(Theme::bodyPt)
-        .arg(Theme::bgCard, Theme::textMuted)
+        .arg(Theme::bgCard(), Theme::textMuted())
         .arg(Theme::captionPt));
     changesLay->addWidget(m_changesView);
 
@@ -446,7 +446,7 @@ RiskyChangeConfirmDialog::RiskyChangeConfirmDialog(QWidget *parent)
     m_emptyChangesNote->setStyleSheet(QStringLiteral(
         "color: %1; font-size: %2pt; background: transparent;"
         " padding: %3px;")
-        .arg(Theme::textMuted).arg(Theme::captionPt).arg(Theme::spaceS));
+        .arg(Theme::textMuted()).arg(Theme::captionPt).arg(Theme::spaceS));
     m_emptyChangesNote->setAlignment(Qt::AlignCenter);
     m_emptyChangesNote->hide();
     changesLay->addWidget(m_emptyChangesNote);
@@ -466,13 +466,13 @@ RiskyChangeConfirmDialog::RiskyChangeConfirmDialog(QWidget *parent)
     m_snapshotCheck->setStyleSheet(QStringLiteral(
         "QCheckBox { color: %1; background: transparent; }"
         "QCheckBox::indicator { width: 14px; height: 14px; }")
-        .arg(Theme::textPrimary));
+        .arg(Theme::textPrimary()));
     snapLay->addWidget(m_snapshotCheck);
 
     auto *helper = new QLabel(tr("(recommended — lets you undo)"), m_snapshotRow);
     helper->setStyleSheet(QStringLiteral(
         "color: %1; font-size: %2pt; background: transparent;")
-        .arg(Theme::textMuted).arg(Theme::captionPt));
+        .arg(Theme::textMuted()).arg(Theme::captionPt));
     snapLay->addWidget(helper);
     snapLay->addStretch();
 
@@ -603,7 +603,7 @@ void RiskyChangeConfirmDialog::updateRiskVisuals()
     QString edgeColor, pillKind, pillText;
     switch (m_risk) {
     case Risk::Info:
-        edgeColor = Theme::accent;
+        edgeColor = Theme::accent();
         pillKind  = QStringLiteral("info");
         pillText  = tr("INFO");
         break;
@@ -627,7 +627,7 @@ void RiskyChangeConfirmDialog::updateRiskVisuals()
     m_headerStrip->setStyleSheet(QStringLiteral(
         "QFrame#riskHeaderStrip { background: %1; border: 1px solid %2;"
         " border-radius: %3px; }")
-        .arg(Theme::bgCard, Theme::border).arg(Theme::radiusCard));
+        .arg(Theme::bgCard(), Theme::border()).arg(Theme::radiusCard));
 }
 
 void RiskyChangeConfirmDialog::rebuildPrimaryButton()
