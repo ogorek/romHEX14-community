@@ -142,6 +142,8 @@ set(SOURCES
     src/io/winols/SimilarityIndex.cpp
     src/io/winols/SimilarFilesDlg.cpp
     src/io/winols/BuildIndexProgressDlg.cpp
+    src/cloud/CloudClient.cpp
+    src/cloud/CloudToolsDlg.cpp
     src/debug/DebugLog.cpp
 )
 
@@ -232,6 +234,8 @@ set(HEADERS
     src/io/winols/SimilarityIndex.h
     src/io/winols/SimilarFilesDlg.h
     src/io/winols/BuildIndexProgressDlg.h
+    src/cloud/CloudClient.h
+    src/cloud/CloudToolsDlg.h
     src/debug/DebugLog.h
 )
 
